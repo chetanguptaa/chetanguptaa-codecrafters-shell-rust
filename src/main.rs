@@ -2,10 +2,11 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
-    let built_ins = ["exit", "echo", "type"];
+    const BUILT_INS: [&str; 3] = ["exit", "echo", "type"];
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -24,59 +25,52 @@ fn main() {
         match cmd {
             "exit" => break,
             "echo" => println!("{}", args.join(" ")),
-            "type" => handle_type(&args, &built_ins),
-            _ => handle_external_programs(&args, &cmd),
+            "type" => handle_type(&args, &BUILT_INS),
+            _ => handle_external_command(cmd, &args),
         }
     }
 }
 
 fn handle_type(args: &[&str], built_ins: &[&str]) {
-    if args.is_empty() {
+    let Some(target) = args.first() else {
         eprintln!("type: missing argument");
         return;
-    }
-    let target = args[0];
-    if built_ins.contains(&target) {
+    };
+    if built_ins.contains(target) {
         println!("{target} is a shell builtin");
         return;
     }
-    match env::var("PATH") {
-        Ok(path) => {
-            for dir in path.split(':').filter(|s| !s.is_empty()) {
-                let file_path = format!("{dir}/{target}");
-                if let Ok(metadata) = fs::metadata(&file_path) {
-                    if metadata.permissions().mode() & 0o111 != 0 {
-                        println!("{target} is {file_path}");
-                        return;
-                    }
-                }
-            }
-            println!("{target}: not found");
-        }
-        Err(_) => println!("PATH variable not set"),
+    match find_executable(target) {
+        Some(path) => println!("{target} is {}", path.display()),
+        None => println!("{target}: not found"),
     }
 }
 
-fn handle_external_programs(args: &[&str], cmd: &str) {
-    match env::var("PATH") {
-        Ok(path) => {
-            for dir in path.split(':').filter(|s| !s.is_empty()) {
-                let file_path = format!("{dir}/{cmd}");
-                if let Ok(metadata) = fs::metadata(&file_path) {
-                    if metadata.permissions().mode() & 0o111 != 0 {
-                        let output = Command::new(cmd)
-                            .args(args)
-                            .output()
-                            .expect("failed to execute process on Unix-like OS");
-                        if output.status.success() {
-                            io::stdout().write_all(&output.stdout).unwrap();
-                        }
-                        return;
-                    }
+fn handle_external_command(cmd: &str, args: &[&str]) {
+    match find_executable(cmd) {
+        Some(_) => match Command::new(cmd).args(args).output() {
+            Ok(output) => {
+                if output.status.success() {
+                    io::stdout().write_all(&output.stdout).unwrap();
+                } else {
+                    io::stderr().write_all(&output.stderr).unwrap();
                 }
             }
-            println!("{cmd}: command not found");
-        }
-        Err(_) => println!("PATH variable not set"),
+            Err(err) => eprintln!("Failed to execute {cmd}: {err}"),
+        },
+        None => println!("{cmd}: command not found"),
     }
+}
+
+fn find_executable(name: &str) -> Option<PathBuf> {
+    let path_var = env::var("PATH").ok()?;
+    for dir in path_var.split(':').filter(|s| !s.is_empty()) {
+        let path = PathBuf::from(dir).join(name);
+        if let Ok(meta) = fs::metadata(&path) {
+            if meta.permissions().mode() & 0o111 != 0 {
+                return Some(path);
+            }
+        }
+    }
+    None
 }
