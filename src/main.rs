@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::os::unix::fs::PermissionsExt;
 
 fn main() {
     let built_ins = vec!["exit", "echo", "type"];
@@ -42,7 +43,14 @@ fn handle_type(args: &Vec<&str>, built_ins: &Vec<&str>) {
         for dir in path.split(':').filter(|s| !s.is_empty()) {
             let file_path = format!("{}/{}", dir, target);
             if fs::metadata(&file_path).is_ok() {
-                println!("{target} is {}", file_path);
+                let metadata = fs::metadata(&file_path).unwrap();
+                let permissions = metadata.permissions();
+                let is_executable = permissions.mode() & 0o111 != 0;
+                if is_executable {
+                    println!("{target} is {}", file_path);
+                } else {
+                    continue;
+                }
                 return;
             }
         }
