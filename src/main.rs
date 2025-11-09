@@ -2,6 +2,7 @@
 use std::io::{self, Write};
 
 fn main() {
+    print!("$ ");
     let mut command = String::new();
     io::stdin()
         .read_line(&mut command)
