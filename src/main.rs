@@ -1,5 +1,4 @@
 use std::env;
-use std::f32::consts::E;
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
@@ -84,7 +83,10 @@ fn handle_cd(args: &Vec<&str>) {
     match arg {
         Some(arg) =>  {
             let new_dir = Path::new(arg);
-            let _ = env::set_current_dir(&new_dir);
+            let res = env::set_current_dir(&new_dir);
+            if res.is_err() {
+                println!("cd: {}: No such file or directory", new_dir.display())
+            }
         }
         None => {
             eprintln!("Error: Please provide argument");
