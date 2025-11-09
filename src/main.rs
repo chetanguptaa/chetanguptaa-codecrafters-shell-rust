@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
-    const BUILT_INS: [&str; 3] = ["exit", "echo", "type"];
+    const BUILT_INS: [&str; 4] = ["exit", "echo", "type", "pwd"];
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
