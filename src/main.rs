@@ -26,6 +26,7 @@ fn main() {
             "exit" => break,
             "echo" => println!("{}", args.join(" ")),
             "type" => handle_type(&args, &BUILT_INS),
+            "pwd" => handle_pwd(),
             _ => handle_external_command(cmd, &args),
         }
     }
@@ -59,6 +60,16 @@ fn handle_external_command(cmd: &str, args: &[&str]) {
             Err(err) => eprintln!("Failed to execute {cmd}: {err}"),
         },
         None => println!("{cmd}: command not found"),
+    }
+}
+
+
+fn handle_pwd() {
+    match env::current_dir() {
+        Ok(path) => println!("{}", path.display()),
+        Err(err) => {
+            eprintln!("Error: failed to get current directory: {}", err);
+        }
     }
 }
 
