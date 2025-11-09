@@ -90,7 +90,7 @@ fn handle_cd(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     };
     let new_dir = Path::new(target);
     if let Err(_) = env::set_current_dir(&new_dir) {
-        eprintln!("cd: {}:", new_dir.display());
+        eprintln!("cd: {}: No such file or directory", new_dir.display());
     }
     Ok(())
 }
