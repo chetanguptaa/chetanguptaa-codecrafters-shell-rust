@@ -1,7 +1,7 @@
-mod shell;
-mod error;
 mod builtins;
+mod error;
 mod exec;
+mod shell;
 
 use crate::shell::Shell;
 

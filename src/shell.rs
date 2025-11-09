@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Write};
 
-use crate::error::{ShellResult};
 use crate::builtins;
+use crate::error::ShellResult;
 use crate::exec;
 
 pub struct Shell {
@@ -40,7 +40,7 @@ impl Shell {
         Ok(())
     }
     fn handle_input(&mut self, input: &str) -> ShellResult<()> {
-        let mut parts = input.split_whitespace();
+        let mut parts = input.split(" ");
         let cmd = match parts.next() {
             Some(c) => c,
             None => return Ok(()),
@@ -52,6 +52,7 @@ impl Shell {
             "type" => builtins::r#type(self, &args)?,
             "pwd" => builtins::pwd()?,
             "cd" => builtins::cd(&args)?,
+            "cat" => builtins::cat(&args)?,
             _ => exec::run_external(self, cmd, &args)?,
         }
         Ok(())

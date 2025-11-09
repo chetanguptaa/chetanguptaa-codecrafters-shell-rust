@@ -3,7 +3,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::error::{ShellResult};
+use crate::error::ShellResult;
 use crate::shell::Shell;
 
 pub fn find_executable(name: &str) -> Option<PathBuf> {
