@@ -13,6 +13,11 @@ fn main() {
         if command.starts_with("exit") {
             break;
         }
+        if command.starts_with("echo") {
+            let args = &command[4..].trim();
+            println!("{}", args);
+            continue;
+        }
         println!("{command}: command not found");
     }
 }
