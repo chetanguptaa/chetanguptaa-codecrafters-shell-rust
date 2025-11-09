@@ -89,8 +89,8 @@ fn handle_cd(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     };
     let new_dir = Path::new(target);
-    if let Err(err) = env::set_current_dir(&new_dir) {
-        eprintln!("cd: {}: {}", new_dir.display(), err);
+    if let Err(_) = env::set_current_dir(&new_dir) {
+        eprintln!("cd: {}:", new_dir.display());
     }
     Ok(())
 }
