@@ -1,12 +1,14 @@
 use std::env;
+use std::f32::consts::E;
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
-    const BUILT_INS: [&str; 4] = ["exit", "echo", "type", "pwd"];
+    const BUILT_INS: [&str; 5] = ["exit", "echo", "type", "pwd", "cd"];
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -27,6 +29,7 @@ fn main() {
             "echo" => println!("{}", args.join(" ")),
             "type" => handle_type(&args, &BUILT_INS),
             "pwd" => handle_pwd(),
+            "cd" => handle_cd(&args),
             _ => handle_external_command(cmd, &args),
         }
     }
@@ -63,12 +66,29 @@ fn handle_external_command(cmd: &str, args: &[&str]) {
     }
 }
 
-
 fn handle_pwd() {
     match env::current_dir() {
         Ok(path) => println!("{}", path.display()),
         Err(err) => {
             eprintln!("Error: failed to get current directory: {}", err);
+        }
+    }
+}
+
+fn handle_cd(args: &Vec<&str>) {
+    if args.is_empty() {
+        eprintln!("Error: Please provide argument");
+        return;
+    }
+    let arg: Option<&&str> = args.iter().next();
+    match arg {
+        Some(arg) =>  {
+            let new_dir = Path::new(arg);
+            let _ = env::set_current_dir(&new_dir);
+        }
+        None => {
+            eprintln!("Error: Please provide argument");
+            return; 
         }
     }
 }
