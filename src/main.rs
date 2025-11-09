@@ -2,97 +2,97 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
     const BUILT_INS: [&str; 5] = ["exit", "echo", "type", "pwd", "cd"];
     loop {
-        if let Err(e) = run_shell(&BUILT_INS) {
-            eprintln!("Error: {}", e);
+        print!("$ ");
+        io::stdout().flush().unwrap();
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).is_err() {
+            eprintln!("Failed to read input");
+            continue;
+        }
+        let input = input.trim();
+        if input.is_empty() {
+            continue;
+        }
+        let mut parts = input.split_whitespace();
+        let cmd = parts.next().unwrap();
+        let args: Vec<&str> = parts.collect();
+        match cmd {
+            "exit" => break,
+            "echo" => println!("{}", args.join(" ")),
+            "type" => handle_type(&args, &BUILT_INS),
+            "pwd" => handle_pwd(),
+            "cd" => handle_cd(&args),
+            _ => handle_external_command(cmd, &args),
         }
     }
 }
 
-fn run_shell(built_ins: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    print!("$ ");
-    io::stdout().flush()?;
-    let mut input = String::new();
-    if io::stdin().read_line(&mut input)? == 0 {
-        std::process::exit(0);
-    }
-    let input = input.trim();
-    if input.is_empty() {
-        return Ok(());
-    }
-    let mut parts = input.split_whitespace();
-    let cmd = parts.next().unwrap();
-    let args: Vec<&str> = parts.collect();
-    match cmd {
-        "exit" => std::process::exit(0),
-        "echo" => println!("{}", args.join(" ")),
-        "type" => handle_type(&args, built_ins)?,
-        "pwd" => handle_pwd()?,
-        "cd" => handle_cd(&args)?,
-        _ => handle_external_command(cmd, &args)?,
-    }
-
-    Ok(())
-}
-
-fn handle_type(args: &[&str], built_ins: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_type(args: &[&str], built_ins: &[&str]) {
     let Some(target) = args.first() else {
         eprintln!("type: missing argument");
-        return Ok(());
+        return;
     };
     if built_ins.contains(target) {
         println!("{target} is a shell builtin");
-        return Ok(());
+        return;
     }
     match find_executable(target) {
         Some(path) => println!("{target} is {}", path.display()),
         None => println!("{target}: not found"),
     }
-    Ok(())
 }
 
-fn handle_external_command(cmd: &str, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    let Some(exec_path) = find_executable(cmd) else {
-        println!("{cmd}: command not found");
-        return Ok(());
-    };
-    let output = Command::new(exec_path).args(args).output();
-    match output {
-        Ok(output) => {
-            if output.status.success() {
-                io::stdout().write_all(&output.stdout).unwrap();
-            } else {
-                io::stderr().write_all(&output.stderr).unwrap();
+fn handle_external_command(cmd: &str, args: &[&str]) {
+    match find_executable(cmd) {
+        Some(_) => match Command::new(cmd).args(args).output() {
+            Ok(output) => {
+                if output.status.success() {
+                    io::stdout().write_all(&output.stdout).unwrap();
+                } else {
+                    io::stderr().write_all(&output.stderr).unwrap();
+                }
             }
-        }
-        Err(err) => eprintln!("Failed to execute {cmd}: {err}"),
+            Err(err) => eprintln!("Failed to execute {cmd}: {err}"),
+        },
+        None => println!("{cmd}: command not found"),
     }
-    Ok(())
 }
 
-fn handle_pwd() -> Result<(), Box<dyn std::error::Error>> {
+fn handle_pwd() {
     match env::current_dir() {
         Ok(path) => println!("{}", path.display()),
-        Err(err) => eprintln!("Error: failed to get current directory: {}", err),
+        Err(err) => {
+            eprintln!("Error: failed to get current directory: {}", err);
+        }
     }
-    Ok(())
 }
 
-fn handle_cd(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    let Some(target) = args.first() else {
-        eprintln!("cd: missing argument");
-        return Ok(());
-    };
-    let new_dir = Path::new(target);
-    if let Err(_) = env::set_current_dir(&new_dir) {
-        eprintln!("cd: {}: No such file or directory", new_dir.display());
+fn handle_cd(args: &Vec<&str>) {
+    if args.is_empty() {
+        eprintln!("Error: Please provide argument");
+        return;
     }
-    Ok(())
+    let arg: Option<&&str> = args.iter().next();
+    match arg {
+        Some(arg) =>  {
+            let new_dir = Path::new(arg);
+            let res = env::set_current_dir(&new_dir);
+            if res.is_err() {
+                println!("cd: {}: No such file or directory", new_dir.display())
+            }
+        }
+        None => {
+            eprintln!("Error: Please provide argument");
+            return; 
+        }
+    }
 }
 
 fn find_executable(name: &str) -> Option<PathBuf> {
@@ -100,7 +100,7 @@ fn find_executable(name: &str) -> Option<PathBuf> {
     for dir in path_var.split(':').filter(|s| !s.is_empty()) {
         let path = PathBuf::from(dir).join(name);
         if let Ok(meta) = fs::metadata(&path) {
-            if meta.is_file() && meta.permissions().mode() & 0o111 != 0 {
+            if meta.permissions().mode() & 0o111 != 0 {
                 return Some(path);
             }
         }
