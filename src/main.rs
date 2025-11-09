@@ -65,9 +65,9 @@ fn handle_external_command(cmd: &str, args: &[&str]) -> Result<(), Box<dyn std::
     match output {
         Ok(output) => {
             if output.status.success() {
-                io::stdout().write_all(&output.stdout)?;
+                io::stdout().write_all(&output.stdout).unwrap();
             } else {
-                io::stderr().write_all(&output.stderr)?;
+                io::stderr().write_all(&output.stderr).unwrap();
             }
         }
         Err(err) => eprintln!("Failed to execute {cmd}: {err}"),
