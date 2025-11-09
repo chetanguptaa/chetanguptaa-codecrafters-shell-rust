@@ -5,6 +5,18 @@ use crate::error::{ShellError, ShellResult};
 use crate::shell::Shell;
 
 pub fn echo(args: &[&str]) -> ShellResult<()> {
+    if args.is_empty() {
+        return Ok(());
+    }
+    if !args[0].starts_with("'") || !args[args.len() - 1].ends_with("'") {
+        let mut new_str = String::new();
+        for arg in args {
+            new_str.push_str(arg);
+            new_str.push(' ');
+        }
+        println!("{}", new_str.split_whitespace().collect::<Vec<&str>>().join(" "));
+        return Ok(());
+    }
     if args.len() == 1 {
         let arg = args[0];
         if arg.starts_with("'") && arg.ends_with("'") {
@@ -15,8 +27,7 @@ pub fn echo(args: &[&str]) -> ShellResult<()> {
         }
         println!("{}", arg);
         return Ok(());
-    }
-    if args.len() > 1 && args[0].starts_with("'") && args[args.len() - 1].ends_with("'") {
+    } else if args.len() > 1 && args[0].starts_with("'") && args[args.len() - 1].ends_with("'") {
         let first = args[0].trim_start_matches("'");
         let last = args[args.len() - 1].trim_end_matches("'");
         let middle = &args[1..args.len() - 1];
