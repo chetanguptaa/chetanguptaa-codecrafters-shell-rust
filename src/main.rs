@@ -81,16 +81,29 @@ fn handle_cd(args: &Vec<&str>) {
     }
     let arg: Option<&&str> = args.iter().next();
     match arg {
-        Some(arg) =>  {
-            let new_dir = Path::new(arg);
-            let res = env::set_current_dir(&new_dir);
-            if res.is_err() {
-                println!("cd: {}: No such file or directory", new_dir.display())
+        Some(arg) => {
+            if arg == &"~" {
+                match env::home_dir() {
+                    Some(new_path) => {
+                        let new_dir = Path::new(&new_path);
+                        let res = env::set_current_dir(&new_dir);
+                        if res.is_err() {
+                            println!("cd: {}: No such file or directory", new_dir.display())
+                        }
+                    }
+                    None => println!("Impossible to get your home dir!"),
+                }
+            } else {
+                let new_dir = Path::new(arg);
+                let res = env::set_current_dir(&new_dir);
+                if res.is_err() {
+                    println!("cd: {}: No such file or directory", new_dir.display())
+                }
             }
         }
         None => {
             eprintln!("Error: Please provide argument");
-            return; 
+            return;
         }
     }
 }
