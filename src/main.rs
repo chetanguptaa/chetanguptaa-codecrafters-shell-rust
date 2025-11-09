@@ -64,10 +64,13 @@ fn handle_external_programs(args: &[&str], cmd: &str) {
                 let file_path = format!("{dir}/{cmd}");
                 if let Ok(metadata) = fs::metadata(&file_path) {
                     if metadata.permissions().mode() & 0o111 != 0 {
-                        Command::new(cmd)
+                        let output = Command::new(cmd)
                             .args(args)
                             .output()
                             .expect("failed to execute process on Unix-like OS");
+                        if output.status.success() {
+                            io::stdout().write_all(&output.stdout).unwrap();
+                        }
                         return;
                     }
                 }
