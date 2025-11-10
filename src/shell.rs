@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Write};
-use std::thread::current;
 
 use crate::builtins;
 use crate::error::ShellResult;
@@ -79,21 +78,25 @@ impl Shell {
         let mut args = Vec::new();
         let mut current_arg = String::new();
         let mut state = QuoteState::None;
+        let mut last_was_escape = false;
         for c in input.chars() {
             match state {
                 QuoteState::None => {
                     match c {
                         '\'' => state = QuoteState::InSingle,
-                        '"' => state = QuoteState::InDouble,
+                        '\"' => state = QuoteState::InDouble,
                         c if c.is_whitespace() => {
                             if !current_arg.is_empty() {
                                 args.push(current_arg);
                                 current_arg = String::new();
                             } else {
-                                current_arg.push(c);
+                                if last_was_escape {
+                                    current_arg.push(c);
+                                }
                             }
                         }
                         '\\' => {
+                            last_was_escape = true;
                             continue;
                         } 
                         _ => {
