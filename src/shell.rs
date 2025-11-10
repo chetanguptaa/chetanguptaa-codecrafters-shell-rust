@@ -90,22 +90,25 @@ impl Shell {
                                 current_arg = String::new();
                             }
                         }
+                        '\\' => {
+                            current_arg.push(' ');
+                        }
                         _ => current_arg.push(c),
                     }
                 }
                 QuoteState::InSingle => {
                     match c {
-                        '\'' => state = QuoteState::None,
+                        '\'' => state = QuoteState::None, 
                         _ => current_arg.push(c),
                     }
                 }
                 QuoteState::InDouble => {
                     match c {
-                        '"' => state = QuoteState::None,
+                        '"' => state = QuoteState::None, 
                         _ => current_arg.push(c),
                     }
                 }
-            }
+            } 
         }
         if !current_arg.is_empty() {
             args.push(current_arg);
