@@ -11,6 +11,7 @@ pub struct Shell {
     running: bool,
 }
 
+#[derive(PartialEq)]
 enum QuoteState {
     None,
     InSingle,
@@ -114,7 +115,15 @@ impl Shell {
                     _ => current_arg.push(c),
                 },
                 QuoteState::InDouble => match c {
-                    '\"' => state = QuoteState::None,
+                    '\"' => {
+                        if last_was_escape {
+                            current_arg.push(c);
+                            last_was_escape = false;
+                        } else {
+                            state = QuoteState::None;
+                        }
+                    }
+                    '\\' => last_was_escape = true,
                     _ => current_arg.push(c),
                 },
             }
