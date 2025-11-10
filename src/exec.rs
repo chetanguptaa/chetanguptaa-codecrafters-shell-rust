@@ -21,8 +21,8 @@ pub fn find_executable(name: &str) -> Option<PathBuf> {
 
 pub fn run_external(shell: &mut Shell, cmd: &str, args: &[&str]) -> ShellResult<()> {
     match shell.resolve_command(cmd) {
-        Some(path) => {
-            let output = Command::new(path).args(args).output()?;
+        Some(_) => {
+            let output = Command::new(cmd).args(args).output()?;
             if output.status.success() {
                 print!("{}", String::from_utf8_lossy(&output.stdout));
             } else {
