@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Write};
+use std::thread::current;
 
 use crate::builtins;
 use crate::error::ShellResult;
@@ -88,12 +89,16 @@ impl Shell {
                             if !current_arg.is_empty() {
                                 args.push(current_arg);
                                 current_arg = String::new();
+                            } else {
+                                current_arg.push(c);
                             }
                         }
                         '\\' => {
-                            current_arg.push(' ');
+                            continue;
+                        } 
+                        _ => {
+                            current_arg.push(c);
                         }
-                        _ => current_arg.push(c),
                     }
                 }
                 QuoteState::InSingle => {
