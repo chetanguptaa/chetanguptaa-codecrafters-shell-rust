@@ -11,6 +11,12 @@ pub struct Shell {
     running: bool,
 }
 
+enum QuoteState {
+    None,
+    InSingle,
+    InDouble,
+}
+
 impl Shell {
     pub fn new() -> Self {
         let builtins = ["exit", "echo", "type", "pwd", "cd"]
@@ -71,22 +77,33 @@ impl Shell {
     fn parse_args(input: &str) -> Vec<String> {
         let mut args = Vec::new();
         let mut current_arg = String::new();
-        let mut in_quote = false;
+        let mut state = QuoteState::None;
         for c in input.chars() {
-            match c {
-                '\'' => {
-                    in_quote = !in_quote;
-                }
-                c if c.is_whitespace() => {
-                    if in_quote {
-                        current_arg.push(c);
-                    } else if !current_arg.is_empty() {
-                        args.push(current_arg);
-                        current_arg = String::new();
+            match state {
+                QuoteState::None => {
+                    match c {
+                        '\'' => state = QuoteState::InSingle,
+                        '"' => state = QuoteState::InDouble,
+                        c if c.is_whitespace() => {
+                            if !current_arg.is_empty() {
+                                args.push(current_arg);
+                                current_arg = String::new();
+                            }
+                        }
+                        _ => current_arg.push(c),
                     }
                 }
-                _ => {
-                    current_arg.push(c);
+                QuoteState::InSingle => {
+                    match c {
+                        '\'' => state = QuoteState::None,
+                        _ => current_arg.push(c),
+                    }
+                }
+                QuoteState::InDouble => {
+                    match c {
+                        '"' => state = QuoteState::None,
+                        _ => current_arg.push(c),
+                    }
                 }
             }
         }
@@ -95,5 +112,4 @@ impl Shell {
         }
         args
     }
-
 }
