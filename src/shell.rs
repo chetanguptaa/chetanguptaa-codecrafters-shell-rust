@@ -79,60 +79,52 @@ impl Shell {
         let mut current_arg = String::new();
         let mut state = QuoteState::None;
         let mut last_was_escape = false;
+        let mut in_argument = false;
         for c in input.chars() {
+            if last_was_escape {
+                current_arg.push(c);
+                last_was_escape = false;
+                in_argument = true;
+                continue;
+            }
             match state {
-                QuoteState::None => {
-                    match c {
-                        '\'' => {
-                            if last_was_escape {
-                                current_arg.push('\'');
-                                last_was_escape = false;
-                                continue;
-                            }
-                            state = QuoteState::InSingle;
-                        }
-                        '\"' => {
-                            if last_was_escape {
-                                current_arg.push('\"');
-                                last_was_escape = false;
-                                continue;
-                            }
-                            state = QuoteState::InDouble;
-                        }
-                        c if c.is_whitespace() => {
-                            if !current_arg.is_empty() {
-                                args.push(current_arg);
-                                current_arg = String::new();
-                            } else {
-                                if last_was_escape {
-                                    current_arg.push(c);
-                                }
-                            }
-                        }
-                        '\\' => {
-                            last_was_escape = true;
-                            continue;
-                        }
-                        _ => {
-                            current_arg.push(c);
+                QuoteState::None => match c {
+                    '\\' => last_was_escape = true,
+                    '\'' => {
+                        state = QuoteState::InSingle;
+                        in_argument = true;
+                    }
+                    '\"' => {
+                        state = QuoteState::InDouble;
+                        in_argument = true;
+                    }
+                    c if c.is_whitespace() => {
+                        if in_argument {
+                            args.push(std::mem::take(&mut current_arg));
+                            in_argument = false;
                         }
                     }
-                }
-                QuoteState::InSingle => {
-                    match c {
-                        '\'' => state = QuoteState::None, 
-                        _ => current_arg.push(c),
+                    _ => {
+                        current_arg.push(c);
+                        in_argument = true;
                     }
-                }
-                QuoteState::InDouble => {
-                    match c {
-                        '"' => state = QuoteState::None, 
-                        _ => current_arg.push(c),
-                    }
-                }
-            } 
+                },
+                QuoteState::InSingle => match c {
+                    '\'' => state = QuoteState::None,
+                    _ => current_arg.push(c),
+                },
+                QuoteState::InDouble => match c {
+                    '\\' => last_was_escape = true,
+                    '\"' => state = QuoteState::None,
+                    _ => current_arg.push(c),
+                },
+            }
         }
-        if !current_arg.is_empty() {
+        if last_was_escape {
+            current_arg.push('\\');
+            in_argument = true;
+        }
+        if in_argument {
             args.push(current_arg);
         }
         args
