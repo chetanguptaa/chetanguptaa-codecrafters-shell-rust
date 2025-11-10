@@ -82,50 +82,52 @@ impl Shell {
         let mut last_was_escape = false;
         let mut in_argument = false;
         for c in input.chars() {
-            if last_was_escape {
-                current_arg.push(c);
-                last_was_escape = false;
-                in_argument = true;
-                continue;
-            }
             match state {
-                QuoteState::None => match c {
-                    '\\' => last_was_escape = true,
-                    '\'' => {
-                        state = QuoteState::InSingle;
+                QuoteState::None => {
+                    if last_was_escape {
+                        current_arg.push(c);
+                        last_was_escape = false;
                         in_argument = true;
-                    }
-                    '\"' => {
-                        state = QuoteState::InDouble;
-                        in_argument = true;
-                    }
-                    c if c.is_whitespace() => {
-                        if in_argument {
-                            args.push(std::mem::take(&mut current_arg));
-                            in_argument = false;
+                    } else {
+                        match c {
+                            '\\' => last_was_escape = true,
+                            '\'' => {
+                                state = QuoteState::InSingle;
+                                in_argument = true;
+                            }
+                            '"' => {
+                                state = QuoteState::InDouble;
+                                in_argument = true;
+                            }
+                            c if c.is_whitespace() => {
+                                if in_argument {
+                                    args.push(std::mem::take(&mut current_arg));
+                                    in_argument = false;
+                                }
+                            }
+                            _ => {
+                                current_arg.push(c);
+                                in_argument = true;
+                            }
                         }
                     }
-                    _ => {
-                        current_arg.push(c);
-                        in_argument = true;
-                    }
-                },
+                }
                 QuoteState::InSingle => match c {
                     '\'' => state = QuoteState::None,
                     _ => current_arg.push(c),
                 },
-                QuoteState::InDouble => match c {
-                    '\"' => {
-                        if last_was_escape {
-                            current_arg.push(c);
-                            last_was_escape = false;
-                        } else {
-                            state = QuoteState::None;
+                QuoteState::InDouble => {
+                    if last_was_escape {
+                        current_arg.push(c);
+                        last_was_escape = false;
+                    } else {
+                        match c {
+                            '\\' => last_was_escape = true,
+                            '"' => state = QuoteState::None,
+                            _ => current_arg.push(c),
                         }
                     }
-                    '\\' => last_was_escape = true,
-                    _ => current_arg.push(c),
-                },
+                }
             }
         }
         if last_was_escape {
