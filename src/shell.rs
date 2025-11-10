@@ -83,8 +83,22 @@ impl Shell {
             match state {
                 QuoteState::None => {
                     match c {
-                        '\'' => state = QuoteState::InSingle,
-                        '\"' => state = QuoteState::InDouble,
+                        '\'' => {
+                            if last_was_escape {
+                                current_arg.push('\'');
+                                last_was_escape = false;
+                                continue;
+                            }
+                            state = QuoteState::InSingle;
+                        }
+                        '\"' => {
+                            if last_was_escape {
+                                current_arg.push('\"');
+                                last_was_escape = false;
+                                continue;
+                            }
+                            state = QuoteState::InDouble;
+                        }
                         c if c.is_whitespace() => {
                             if !current_arg.is_empty() {
                                 args.push(current_arg);
@@ -98,7 +112,7 @@ impl Shell {
                         '\\' => {
                             last_was_escape = true;
                             continue;
-                        } 
+                        }
                         _ => {
                             current_arg.push(c);
                         }
