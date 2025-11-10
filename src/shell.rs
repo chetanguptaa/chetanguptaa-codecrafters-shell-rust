@@ -39,24 +39,6 @@ impl Shell {
         }
         Ok(())
     }
-    fn handle_input(&mut self, input: &str) -> ShellResult<()> {
-        let mut parts = input.split(" ");
-        let cmd = match parts.next() {
-            Some(c) => c,
-            None => return Ok(()),
-        };
-        let args: Vec<&str> = parts.collect();
-        match cmd {
-            "exit" => self.running = false,
-            "echo" => builtins::echo(&args)?,
-            "type" => builtins::r#type(self, &args)?,
-            "pwd" => builtins::pwd()?,
-            "cd" => builtins::cd(&args)?,
-            "cat" => builtins::cat(&args)?,
-            _ => exec::run_external(self, cmd, &args)?,
-        }
-        Ok(())
-    }
     pub fn resolve_command(&mut self, name: &str) -> Option<std::path::PathBuf> {
         if let Some(p) = self.path_cache.get(name) {
             return Some(p.clone());
@@ -68,4 +50,50 @@ impl Shell {
             None
         }
     }
+    fn handle_input(&mut self, input: &str) -> ShellResult<()> {
+        let parts: Vec<String> = Self::parse_args(input);
+        if parts.is_empty() {
+            return Ok(());
+        }
+        let cmd = &parts[0];
+        let args: Vec<&str> = parts.iter().skip(1).map(|s| s.as_str()).collect();
+        match cmd.as_str() {
+            "exit" => self.running = false,
+            "echo" => builtins::echo(&args)?,
+            "type" => builtins::r#type(self, &args)?,
+            "pwd" => builtins::pwd()?,
+            "cd" => builtins::cd(&args)?,
+            "cat" => builtins::cat(&args)?,
+            _ => exec::run_external(self, cmd, &args)?,
+        }
+        Ok(())
+    }
+    fn parse_args(input: &str) -> Vec<String> {
+        let mut args = Vec::new();
+        let mut current_arg = String::new();
+        let mut in_quote = false;
+        for c in input.chars() {
+            match c {
+                '\'' => {
+                    in_quote = !in_quote;
+                }
+                c if c.is_whitespace() => {
+                    if in_quote {
+                        current_arg.push(c);
+                    } else if !current_arg.is_empty() {
+                        args.push(current_arg);
+                        current_arg = String::new();
+                    }
+                }
+                _ => {
+                    current_arg.push(c);
+                }
+            }
+        }
+        if !current_arg.is_empty() {
+            args.push(current_arg);
+        }
+        args
+    }
+
 }

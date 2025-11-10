@@ -1,43 +1,19 @@
 use std::env;
+use std::io::{self, Write};
 use std::path::Path;
 
 use crate::error::{ShellError, ShellResult};
 use crate::shell::Shell;
 
 pub fn echo(args: &[&str]) -> ShellResult<()> {
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
     if args.is_empty() {
+        writeln!(handle, "")?;
         return Ok(());
     }
-    if !args[0].starts_with("'") || !args[args.len() - 1].ends_with("'") {
-        let mut new_str = String::new();
-        for arg in args {
-            new_str.push_str(arg);
-            new_str.push(' ');
-        }
-        println!("{}", new_str.split_whitespace().collect::<Vec<&str>>().join(" "));
-        return Ok(());
-    }
-    if args.len() == 1 {
-        let arg = args[0];
-        if arg.starts_with("'") && arg.ends_with("'") {
-            let empty_str: &str = "";
-            let new_str= arg.replace('\'', empty_str);
-            println!("{}", new_str);
-            return Ok(());
-        }
-        println!("{}", arg);
-        return Ok(());
-    } else if args.len() > 1 && args[0].starts_with("'") && args[args.len() - 1].ends_with("'") {
-        let first = args[0].trim_start_matches("'");
-        let last = args[args.len() - 1].trim_end_matches("'");
-        let middle = &args[1..args.len() - 1];
-        let mut all_parts = vec![first];
-        all_parts.extend_from_slice(middle);
-        all_parts.push(last);
-        println!("{}", all_parts.join(" "));
-        return Ok(());
-    }
-    println!("{}", args.join(" "));
+    let output = args.join(" ");
+    writeln!(handle, "{}", output)?;
     Ok(())
 }
 
