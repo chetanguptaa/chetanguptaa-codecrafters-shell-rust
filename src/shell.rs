@@ -114,7 +114,6 @@ impl Shell {
                     _ => current_arg.push(c),
                 },
                 QuoteState::InDouble => match c {
-                    '\\' => last_was_escape = true,
                     '\"' => state = QuoteState::None,
                     _ => current_arg.push(c),
                 },
