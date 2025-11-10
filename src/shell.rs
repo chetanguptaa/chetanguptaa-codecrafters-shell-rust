@@ -118,7 +118,13 @@ impl Shell {
                 },
                 QuoteState::InDouble => {
                     if last_was_escape {
-                        current_arg.push(c);
+                        match c {
+                            '"' | '\\' => current_arg.push(c),
+                            _ => {
+                                current_arg.push('\\');
+                                current_arg.push(c);
+                            }
+                        }
                         last_was_escape = false;
                     } else {
                         match c {
