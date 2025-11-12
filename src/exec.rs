@@ -33,9 +33,9 @@ pub fn run_external(
             let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
             if output.status.success() {
-                write!(handle, "{}", stdout)?;
+                write!(handle, "{}", stdout.trim_end())?;
             } else {
-                write!(handle, "{}", stderr)?;
+                write!(handle, "{}", stderr.trim_end())?;
             }
             Ok(())
         }
