@@ -30,12 +30,10 @@ pub fn run_external(
     match shell.resolve_command(cmd) {
         Some(_) => {
             let output = Command::new(cmd).args(args).output()?;
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
             if output.status.success() {
-                write!(handle, "{}", stdout.trim_end())?;
+                handle.write_all(&output.stdout)?;
             } else {
-                write!(handle, "{}", stderr.trim_end())?;
+                handle.write_all(&output.stderr)?;
             }
             Ok(())
         }

@@ -72,7 +72,7 @@ pub fn cat(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
     for filename in args {
         let content = std::fs::read_to_string(filename);
         match content {
-            Ok(text) => write!(handle, "{}", text)?,
+            Ok(text) => writeln!(handle, "{}", text)?,
             Err(_) => writeln!(handle, "cat: {}: No such file or directory", filename)?,
         }
     }
