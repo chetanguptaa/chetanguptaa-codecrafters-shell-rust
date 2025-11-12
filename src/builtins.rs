@@ -21,7 +21,7 @@ pub fn echo(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
         write!(handle, "")?;
     } else {
         let output = args.join(" ");
-        write!(handle, "{}", output.trim_end())?;
+        write!(handle, "{}", output)?;
     }
     Ok(())
 }
@@ -29,7 +29,7 @@ pub fn echo(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
 pub fn pwd(redirect_out: Option<&str>) -> ShellResult<()> {
     let mut handle = get_output_stream(redirect_out)?;
     let dir = env::current_dir()?;
-    write!(handle, "{}", dir.display().to_string().trim_end())?;
+    writeln!(handle, "{}", dir.display().to_string().trim_end())?;
     Ok(())
 }
 
@@ -54,12 +54,12 @@ pub fn r#type(shell: &mut Shell, args: &[&str], redirect_out: Option<&str>) -> S
     };
     let mut handle = get_output_stream(redirect_out)?;
     if shell.builtins.contains(*name) {
-        write!(handle, "{name} is a shell builtin")?;
+        writeln!(handle, "{name} is a shell builtin")?;
         return Ok(());
     }
     match shell.resolve_command(name) {
-        Some(path) => write!(handle, "{name} is {}", path.display())?,
-        None => write!(handle, "{name}: not found")?,
+        Some(path) => writeln!(handle, "{name} is {}", path.display())?,
+        None => writeln!(handle, "{name}: not found")?,
     }
     Ok(())
 }
@@ -73,7 +73,7 @@ pub fn cat(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
         let content = std::fs::read_to_string(filename);
         match content {
             Ok(text) => write!(handle, "{}", text)?,
-            Err(_) => write!(handle, "cat: {}: No such file or directory", filename)?,
+            Err(_) => writeln!(handle, "cat: {}: No such file or directory", filename)?,
         }
     }
     Ok(())
