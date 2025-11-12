@@ -59,7 +59,7 @@ pub fn r#type(shell: &mut Shell, args: &[&str], redirect_out: Option<&str>) -> S
     }
     match shell.resolve_command(name) {
         Some(path) => writeln!(handle, "{name} is {}", path.display())?,
-        None => writeln!(handle, "{name}: not found")?,
+        None => println!("{name}: not found"),
     }
     Ok(())
 }
@@ -73,7 +73,7 @@ pub fn cat(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
         let content = std::fs::read_to_string(filename);
         match content {
             Ok(text) => writeln!(handle, "{}", text)?,
-            Err(_) => writeln!(handle, "cat: {}: No such file or directory", filename)?,
+            Err(_) => println!("cat: {}: No such file or directory", filename)
         }
     }
     Ok(())
