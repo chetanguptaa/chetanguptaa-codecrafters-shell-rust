@@ -32,7 +32,6 @@ pub fn run_external(
             let output = Command::new(cmd).args(args).output()?;
             if output.status.success() {
                 writeln!(handle, "{}", String::from_utf8_lossy(&output.stdout))?;
-                writeln!(handle, "{}", String::from_utf8_lossy(&output.stdout))?;
             } else {
                 writeln!(handle, "{}", String::from_utf8_lossy(&output.stderr))?;
             }
