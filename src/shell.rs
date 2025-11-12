@@ -36,8 +36,9 @@ impl Shell {
         while self.running {
             if !self.is_shell_initializing_for_the_first_time {
                 println!();
+            } else {
+                self.is_shell_initializing_for_the_first_time = false;
             }
-            self.is_shell_initializing_for_the_first_time = false;
             print!("$ ");
             io::stdout().flush()?;
             let mut input = String::new();
