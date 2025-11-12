@@ -35,7 +35,7 @@ impl Shell {
     pub fn run(&mut self) -> ShellResult<()> {
         while self.running {
             if !self.is_shell_initializing_for_the_first_time {
-                println!();
+                print!("\r"); 
             } else {
                 self.is_shell_initializing_for_the_first_time = false;
             }
