@@ -21,7 +21,7 @@ pub fn echo(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
         writeln!(handle, "")?;
     } else {
         let output = args.join(" ");
-        writeln!(handle, "{}", output)?;
+        writeln!(handle, "{}", output.trim_end())?;
     }
     Ok(())
 }
@@ -29,7 +29,7 @@ pub fn echo(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
 pub fn pwd(redirect_out: Option<&str>) -> ShellResult<()> {
     let mut handle = get_output_stream(redirect_out)?;
     let dir = env::current_dir()?;
-    writeln!(handle, "{}", dir.display())?;
+    writeln!(handle, "{}", dir.display().to_string().trim_end())?;
     Ok(())
 }
 
