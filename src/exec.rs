@@ -5,6 +5,7 @@ use std::process::Command;
 
 use crate::error::ShellResult;
 use crate::shell::Shell;
+use crate::builtins;
 
 pub fn find_executable(name: &str) -> Option<PathBuf> {
     let path_var = std::env::var("PATH").ok()?;
@@ -19,19 +20,26 @@ pub fn find_executable(name: &str) -> Option<PathBuf> {
     None
 }
 
-pub fn run_external(shell: &mut Shell, cmd: &str, args: &[&str]) -> ShellResult<()> {
+pub fn run_external(
+    shell: &mut Shell,
+    cmd: &str,
+    args: &[&str],
+    redirect_out: Option<&str>,
+) -> ShellResult<()> {
+    let mut handle = builtins::get_output_stream(redirect_out)?;
     match shell.resolve_command(cmd) {
         Some(_) => {
             let output = Command::new(cmd).args(args).output()?;
             if output.status.success() {
-                print!("{}", String::from_utf8_lossy(&output.stdout));
+                writeln!(handle, "{}", String::from_utf8_lossy(&output.stdout))?;
+                writeln!(handle, "{}", String::from_utf8_lossy(&output.stdout))?;
             } else {
-                eprint!("{}", String::from_utf8_lossy(&output.stderr));
+                writeln!(handle, "{}", String::from_utf8_lossy(&output.stderr))?;
             }
             Ok(())
         }
         None => {
-            println!("{cmd}: command not found");
+            writeln!(handle, "{cmd}: command not found")?;
             Ok(())
         }
     }
