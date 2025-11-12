@@ -31,14 +31,14 @@ pub fn run_external(
         Some(_) => {
             let output = Command::new(cmd).args(args).output()?;
             if output.status.success() {
-                writeln!(handle, "{}", String::from_utf8_lossy(&output.stdout))?;
+                write!(handle, "{}", String::from_utf8_lossy(&output.stdout))?;
             } else {
-                writeln!(handle, "{}", String::from_utf8_lossy(&output.stderr))?;
+                write!(handle, "{}", String::from_utf8_lossy(&output.stderr))?;
             }
             Ok(())
         }
         None => {
-            writeln!(handle, "{cmd}: command not found")?;
+            write!(handle, "{cmd}: command not found")?;
             Ok(())
         }
     }
