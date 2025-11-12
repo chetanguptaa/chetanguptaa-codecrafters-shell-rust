@@ -31,6 +31,7 @@ impl Shell {
         }
     }
     pub fn run(&mut self) -> ShellResult<()> {
+        println!();
         while self.running {
             print!("$ ");
             io::stdout().flush()?;
@@ -43,7 +44,7 @@ impl Shell {
                 continue;
             }
             if let Err(e) = self.handle_input(input) {
-                eprintln!("shell: error: {}", e);
+                eprint!("shell: error: {}", e);
             }
         }
         Ok(())
@@ -73,13 +74,13 @@ impl Shell {
                 ">" | "1>" => {
                     if i + 1 < parts.len() {
                         if redirect_out.is_some() {
-                            eprintln!("shell: error: multiple output redirects");
+                            eprint!("shell: error: multiple output redirects");
                             return Ok(());
                         }
                         redirect_out = Some(&parts[i + 1]);
                         i += 2;
                     } else {
-                        eprintln!("shell: error: missing filename after redirection");
+                        eprint!("shell: error: missing filename after redirection");
                         return Ok(());
                     }
                 }
