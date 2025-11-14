@@ -3,7 +3,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::error::ShellResult;
+use crate::error::{ShellError, ShellResult};
 use crate::shell::Shell;
 use crate::builtins;
 
@@ -26,22 +26,29 @@ pub fn run_external(
     args: &[&str],
     redirect_out: Option<&str>,
 ) -> ShellResult<()> {
+    // This gets the file (e.g., quz.md) or stdout
     let mut handle = builtins::get_output_stream(redirect_out)?;
+
     match shell.resolve_command(cmd) {
         Some(_) => {
+            // Run the command and capture all its output
             let output = Command::new(cmd).args(args).output()?;
             let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
-            if output.status.success() {
-                writeln!(handle, "{}", stdout)?;
-            } else {
-                writeln!(handle, "{}", stderr)?;
+            write!(handle, "{}", stdout)?;
+            eprint!("{}", stderr);
+            if !output.status.success() {
+                return Err(ShellError::InvalidInput(format!(
+                    "{cmd}: command failed"
+                )));
             }
             Ok(())
         }
         None => {
-            write!(handle, "{cmd}: command not found")?;
-            Ok(())
+            eprintln!("{cmd}: command not found");
+            Err(ShellError::InvalidInput(format!(
+                "{cmd}: command not found"
+            )))
         }
     }
 }
