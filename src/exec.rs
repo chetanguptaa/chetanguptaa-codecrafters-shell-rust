@@ -46,9 +46,7 @@ pub fn run_external(
         }
         None => {
             eprintln!("{cmd}: command not found");
-            Err(ShellError::InvalidInput(format!(
-                "{cmd}: command not found"
-            )))
+            Ok(())
         }
     }
 }
