@@ -6,7 +6,6 @@ use crate::error::ShellResult;
 use crate::exec;
 
 pub struct Shell {
-    is_shell_initializing_for_the_first_time: bool,
     pub builtins: HashSet<String>,
     path_cache: HashMap<String, std::path::PathBuf>,
     running: bool,
@@ -26,19 +25,13 @@ impl Shell {
             .map(|s| s.to_string())
             .collect();
         Self {
-            is_shell_initializing_for_the_first_time: true,
             builtins,
             path_cache: HashMap::new(),
             running: true,
         }
     }
     pub fn run(&mut self) -> ShellResult<()> {
-        while self.running {
-            if !self.is_shell_initializing_for_the_first_time {
-                print!("\r"); 
-            } else {
-                self.is_shell_initializing_for_the_first_time = false;
-            }
+        while self.running { 
             print!("$ ");
             io::stdout().flush()?;
             let mut input = String::new();
@@ -50,7 +43,7 @@ impl Shell {
                 continue;
             }
             if let Err(e) = self.handle_input(input) {
-                eprint!("shell: error: {}", e);
+                eprintln!("shell: error: {}", e);
             }
         }
         Ok(())
