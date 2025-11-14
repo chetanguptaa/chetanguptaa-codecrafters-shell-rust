@@ -64,7 +64,7 @@ pub fn r#type(shell: &mut Shell, args: &[&str], redirect_out: Option<&str>) -> S
         Some(path) => {
             writeln!(handle, "{name} is {}", path.display())?;
         }
-        None => print!("{name}: not found"),
+        None => println!("{name}: not found"),
     }
     Ok(())
 }
