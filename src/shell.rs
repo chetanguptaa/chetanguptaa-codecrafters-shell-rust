@@ -20,7 +20,7 @@ enum QuoteState {
 
 impl Shell {
     pub fn new() -> Self {
-        let builtins = ["exit", "echo", "type", "pwd", "cd", "cat"]
+        let builtins = ["exit", "echo", "type", "pwd", "cd"]
             .iter()
             .map(|s| s.to_string())
             .collect();
