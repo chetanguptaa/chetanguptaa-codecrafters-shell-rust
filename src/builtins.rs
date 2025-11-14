@@ -46,7 +46,7 @@ pub fn cd(args: &[&str]) -> ShellResult<()> {
         Path::new(args[0]).to_path_buf()
     };
     if let Err(_) = env::set_current_dir(&target) {
-        print!("cd: {}: No such file or directory", target.display());
+        println!("cd: {}: No such file or directory", target.display());
     }
     Ok(())
 }
