@@ -25,7 +25,11 @@ pub fn get_output_stream(redirect_out: Option<&str>) -> ShellResult<Box<dyn Writ
     }
 }
 
-pub fn echo(args: &[&str], redirect_stdout: Option<&str>, redirect_stderr: Option<&str>) -> ShellResult<()> {
+pub fn echo(
+    args: &[&str],
+    redirect_stdout: Option<&str>,
+    redirect_stderr: Option<&str>,
+) -> ShellResult<()> {
     let mut out_handle = get_output_stream(redirect_stdout)?;
     let _err_handle = get_output_stream(redirect_stderr)?;
     if args.is_empty() {
@@ -60,7 +64,12 @@ pub fn cd(args: &[&str]) -> ShellResult<()> {
     Ok(())
 }
 
-pub fn r#type(shell: &mut Shell, args: &[&str], redirect_stdout: Option<&str>, redirect_stderr: Option<&str>) -> ShellResult<()> {
+pub fn r#type(
+    shell: &mut Shell,
+    args: &[&str],
+    redirect_stdout: Option<&str>,
+    redirect_stderr: Option<&str>,
+) -> ShellResult<()> {
     let Some(name) = args.first() else {
         return Err(ShellError::InvalidInput("type: missing argument".into()));
     };

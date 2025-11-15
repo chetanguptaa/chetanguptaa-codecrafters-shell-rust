@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use crate::builtins;
-use crate::error::{ShellResult};
+use crate::error::ShellResult;
 use crate::shell::Shell;
 
 pub fn find_executable(name: &str) -> Option<PathBuf> {

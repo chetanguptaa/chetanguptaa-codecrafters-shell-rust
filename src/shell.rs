@@ -1,9 +1,12 @@
 use std::collections::{HashMap, HashSet};
-use std::io::{self, Write};
+use std::io::{self, Stdout, Write};
 
-use crate::builtins;
+use crate::{builtins};
 use crate::error::ShellResult;
 use crate::exec;
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::{IntoRawMode, RawTerminal};
 
 pub struct Shell {
     pub builtins: HashSet<String>,
@@ -33,21 +36,64 @@ impl Shell {
     pub fn run(&mut self) -> ShellResult<()> {
         while self.running {
             print!("$ ");
-            io::stdout().flush()?;
+            let stdout = io::stdout();
+            let mut stdout = stdout.into_raw_mode()?; 
+            stdout.flush()?;
             let mut input = String::new();
-            if io::stdin().read_line(&mut input)? == 0 {
-                break;
-            }
-            let input = input.trim();
-            if input.is_empty() {
-                continue;
-            }
-            if let Err(e) = self.handle_input(input) {
-                eprintln!("shell: error: {}", e);
+            for key in io::stdin().keys() {
+                match key? {
+                    Key::Char('\n') => {
+                        write!(stdout, "\r\n")?;
+                        stdout.flush()?;
+                        drop(stdout);
+                        let trimmed = input.trim();
+                        if trimmed.is_empty() {
+                            break;
+                        }
+                        if let Err(e) = self.handle_input(trimmed) {
+                            eprintln!("shell: error: {}", e);
+                        }
+                        break;
+                    }
+                    Key::Char('\t') => {
+                        if input.ends_with(' ') {
+                            input.push_str("    ");
+                        } else {
+                            let parts = Self::parse_args(&input);
+                            if let Some(last) = parts.last() {
+                                let mut matches: Vec<&String> = self
+                                    .builtins
+                                    .iter()
+                                    .filter(|b| b.starts_with(last))
+                                    .collect();
+                                matches.sort();
+                                if matches.len() == 1 {
+                                    let completion = &matches[0][last.len()..];
+                                    input.push_str(completion);
+                                    redraw_line(&mut stdout, &input);
+                                }
+                            }
+                        }
+                        stdout.flush()?;
+                    }
+                    Key::Char(c) => {
+                        input.push(c);
+                        redraw_line(&mut stdout, &input);
+                    }
+                    Key::Backspace => {
+                        input.pop();
+                        redraw_line(&mut stdout, &input);
+                    }
+                    _ => {
+                        self.running = false;
+                        break;
+                    }
+                }
             }
         }
         Ok(())
     }
+
     pub fn resolve_command(&mut self, name: &str) -> Option<std::path::PathBuf> {
         if let Some(p) = self.path_cache.get(name) {
             return Some(p.clone());
@@ -205,4 +251,15 @@ impl Shell {
         }
         args
     }
+}
+
+fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) {
+    write!(
+        stdout,
+        "\r{}{}",
+        termion::clear::CurrentLine,
+        format!("$ {}", input)
+    )
+    .unwrap();
+    stdout.flush().unwrap();
 }
