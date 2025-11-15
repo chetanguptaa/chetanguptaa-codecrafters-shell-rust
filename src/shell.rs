@@ -73,6 +73,9 @@ impl Shell {
                                     input.push(' ');
                                     redraw_line(&mut stdout, &input);
                                 }
+                                if matches.len() == 0 {
+                                    print!("\x07");
+                                }
                             }
                         }
                         stdout.flush()?;
