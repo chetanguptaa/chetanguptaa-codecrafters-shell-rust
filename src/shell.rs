@@ -31,7 +31,7 @@ impl Shell {
         }
     }
     pub fn run(&mut self) -> ShellResult<()> {
-        while self.running { 
+        while self.running {
             print!("$ ");
             io::stdout().flush()?;
             let mut input = String::new();
@@ -66,22 +66,34 @@ impl Shell {
         }
         let cmd = &parts[0];
         let mut args: Vec<&str> = Vec::new();
-        let mut redirect_out: Option<&str> = None;
+        let mut redirect_stdout: Option<&str> = None;
+        let mut redirect_stderr: Option<&str> = None;
         let mut i = 1;
         while i < parts.len() {
             match parts[i].as_str() {
                 ">" | "1>" => {
-                    if i + 1 < parts.len() {
-                        if redirect_out.is_some() {
-                            eprint!("shell: error: multiple output redirects");
-                            return Ok(());
-                        }
-                        redirect_out = Some(&parts[i + 1]);
-                        i += 2;
-                    } else {
-                        eprint!("shell: error: missing filename after redirection");
+                    if redirect_stdout.is_some() {
+                        eprintln!("shell: error: multiple stdout redirects");
                         return Ok(());
                     }
+                    if i + 1 >= parts.len() {
+                        eprintln!("shell: error: missing filename after redirection");
+                        return Ok(());
+                    }
+                    redirect_stdout = Some(&parts[i + 1]);
+                    i += 2;
+                }
+                "2>" => {
+                    if redirect_stderr.is_some() {
+                        eprintln!("shell: error: multiple stderr redirects");
+                        return Ok(());
+                    }
+                    if i + 1 >= parts.len() {
+                        eprintln!("shell: error: missing filename after redirection");
+                        return Ok(());
+                    }
+                    redirect_stderr = Some(&parts[i + 1]);
+                    i += 2;
                 }
                 _ => {
                     args.push(&parts[i]);
@@ -91,12 +103,12 @@ impl Shell {
         }
         match cmd.as_str() {
             "exit" => self.running = false,
-            "echo" => builtins::echo(&args, redirect_out)?,
-            "type" => builtins::r#type(self, &args, redirect_out)?,
-            "pwd" => builtins::pwd(redirect_out)?,
+            "echo" => builtins::echo(&args, redirect_stdout, redirect_stderr)?,
+            "type" => builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?,
+            "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
-            "cat" => builtins::cat(&args, redirect_out)?,
-            _ => exec::run_external(self, cmd, &args, redirect_out)?,
+            "cat" => builtins::cat(&args, redirect_stdout, redirect_stderr)?,
+            _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
         }
         Ok(())
     }

@@ -1,7 +1,7 @@
 use crate::error::{ShellError, ShellResult};
 use crate::shell::Shell;
 use std::env;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
@@ -18,21 +18,21 @@ pub fn get_output_stream(redirect_out: Option<&str>) -> ShellResult<Box<dyn Writ
     }
 }
 
-pub fn echo(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
-    let mut handle = get_output_stream(redirect_out)?;
+pub fn echo(args: &[&str], redirect_stdout: Option<&str>, _: Option<&str>) -> ShellResult<()> {
+    let mut out_handle = get_output_stream(redirect_stdout)?;
     if args.is_empty() {
-        writeln!(handle, "")?;
+        writeln!(out_handle, "")?;
     } else {
         let output = args.join(" ");
-        writeln!(handle, "{}", output)?;
+        writeln!(out_handle, "{}", output)?;
     }
     Ok(())
 }
 
-pub fn pwd(redirect_out: Option<&str>) -> ShellResult<()> {
-    let mut handle = get_output_stream(redirect_out)?;
+pub fn pwd(redirect_stdout: Option<&str>, _: Option<&str>) -> ShellResult<()> {
+    let mut out_handle = get_output_stream(redirect_stdout)?;
     let dir = env::current_dir()?;
-    writeln!(handle, "{}", dir.display())?;
+    writeln!(out_handle, "{}", dir.display())?;
     Ok(())
 }
 
@@ -51,36 +51,47 @@ pub fn cd(args: &[&str]) -> ShellResult<()> {
     Ok(())
 }
 
-pub fn r#type(shell: &mut Shell, args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
+pub fn r#type(shell: &mut Shell, args: &[&str], redirect_stdout: Option<&str>, redirect_stderr: Option<&str>) -> ShellResult<()> {
     let Some(name) = args.first() else {
         return Err(ShellError::InvalidInput("type: missing argument".into()));
     };
-    let mut handle = get_output_stream(redirect_out)?;
+    let mut out_handle = get_output_stream(redirect_stdout)?;
+    let mut err_handle = get_output_stream(redirect_stderr)?;
     if shell.builtins.contains(*name) {
-        writeln!(handle, "{name} is a shell builtin")?;
+        writeln!(out_handle, "{name} is a shell builtin")?;
         return Ok(());
     }
     match shell.resolve_command(name) {
         Some(path) => {
-            writeln!(handle, "{name} is {}", path.display())?;
+            writeln!(out_handle, "{name} is {}", path.display())?;
         }
-        None => println!("{name}: not found"),
+        None => writeln!(err_handle, "{}: not found", name)?,
     }
     Ok(())
 }
 
-pub fn cat(args: &[&str], redirect_out: Option<&str>) -> ShellResult<()> {
+pub fn cat(
+    args: &[&str],
+    redirect_stdout: Option<&str>,
+    redirect_stderr: Option<&str>,
+) -> ShellResult<()> {
     if args.is_empty() {
         return Err(ShellError::InvalidInput("cat: missing argument".into()));
     }
-    let mut handle = get_output_stream(redirect_out)?;
+    let mut out_handle = get_output_stream(redirect_stdout)?;
+    let mut err_handle = get_output_stream(redirect_stderr)?;
     for filename in args {
         let content = std::fs::read_to_string(filename);
         match content {
             Ok(text) => {
-                write!(handle, "{}", text)?;
+                write!(out_handle, "{}", text)?;
+                if !text.ends_with('\n') {
+                    writeln!(out_handle)?;
+                }
             }
-            Err(_) => eprintln!("cat: {}: No such file or directory", filename)
+            Err(_) => {
+                writeln!(err_handle, "cat: {}: No such file or directory", filename)?;
+            }
         }
     }
     Ok(())
