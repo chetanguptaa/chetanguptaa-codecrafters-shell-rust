@@ -8,18 +8,26 @@ use std::path::Path;
 pub fn get_output_stream(redirect_out: Option<&str>) -> ShellResult<Box<dyn Write>> {
     match redirect_out {
         Some(filename) => {
+            let path = Path::new(filename);
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    std::fs::create_dir_all(parent)?;
+                }
+            }
             let file = OpenOptions::new()
                 .create(true)
-                .append(true)
-                .open(filename)?;
+                .write(true)
+                .truncate(true)
+                .open(path)?;
             Ok(Box::new(BufWriter::new(file)))
         }
         None => Ok(Box::new(io::stdout())),
     }
 }
 
-pub fn echo(args: &[&str], redirect_stdout: Option<&str>, _: Option<&str>) -> ShellResult<()> {
+pub fn echo(args: &[&str], redirect_stdout: Option<&str>, redirect_stderr: Option<&str>) -> ShellResult<()> {
     let mut out_handle = get_output_stream(redirect_stdout)?;
+    let _err_handle = get_output_stream(redirect_stderr)?;
     if args.is_empty() {
         writeln!(out_handle, "")?;
     } else {
@@ -29,8 +37,9 @@ pub fn echo(args: &[&str], redirect_stdout: Option<&str>, _: Option<&str>) -> Sh
     Ok(())
 }
 
-pub fn pwd(redirect_stdout: Option<&str>, _: Option<&str>) -> ShellResult<()> {
+pub fn pwd(redirect_stdout: Option<&str>, redirect_stderr: Option<&str>) -> ShellResult<()> {
     let mut out_handle = get_output_stream(redirect_stdout)?;
+    let _err_handle = get_output_stream(redirect_stderr)?;
     let dir = env::current_dir()?;
     writeln!(out_handle, "{}", dir.display())?;
     Ok(())
