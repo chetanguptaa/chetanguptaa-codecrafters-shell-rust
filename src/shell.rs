@@ -107,6 +107,18 @@ impl Shell {
                     redirect_stdout = Some(&parts[i + 1]);
                     i += 2;
                 }
+                "2>>" => {
+                    if redirect_stderr.is_some() {
+                        eprintln!("shell: error: multiple stderr redirects");
+                        return Ok(());
+                    }
+                    if i + 1 >= parts.len() {
+                        eprintln!("shell: error: missing filename after redirection");
+                        return Ok(());
+                    }
+                    redirect_stderr = Some(&parts[i + 1]);
+                    i += 2;
+                }
                 _ => {
                     args.push(&parts[i]);
                     i += 1;
