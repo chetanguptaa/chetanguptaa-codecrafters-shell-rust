@@ -16,8 +16,8 @@ pub fn get_output_stream(redirect_out: Option<&str>) -> ShellResult<Box<dyn Writ
             }
             let file = OpenOptions::new()
                 .create(true)
+                .append(true)
                 .write(true)
-                .truncate(true)
                 .open(path)?;
             Ok(Box::new(BufWriter::new(file)))
         }
