@@ -70,6 +70,7 @@ impl Shell {
                                 if matches.len() == 1 {
                                     let completion = &matches[0][last.len()..];
                                     input.push_str(completion);
+                                    input.push(' ');
                                     redraw_line(&mut stdout, &input);
                                 }
                             }
