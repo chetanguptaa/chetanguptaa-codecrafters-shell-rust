@@ -78,30 +78,3 @@ pub fn r#type(shell: &mut Shell, args: &[&str], redirect_stdout: Option<&str>, r
     }
     Ok(())
 }
-
-pub fn cat(
-    args: &[&str],
-    redirect_stdout: Option<&str>,
-    redirect_stderr: Option<&str>,
-) -> ShellResult<()> {
-    if args.is_empty() {
-        return Err(ShellError::InvalidInput("cat: missing argument".into()));
-    }
-    let mut out_handle = get_output_stream(redirect_stdout)?;
-    let mut err_handle = get_output_stream(redirect_stderr)?;
-    for filename in args {
-        let content = std::fs::read_to_string(filename);
-        match content {
-            Ok(text) => {
-                write!(out_handle, "{}", text)?;
-                if !text.ends_with('\n') {
-                    writeln!(out_handle)?;
-                }
-            }
-            Err(_) => {
-                writeln!(err_handle, "cat: {}: No such file or directory", filename)?;
-            }
-        }
-    }
-    Ok(())
-}

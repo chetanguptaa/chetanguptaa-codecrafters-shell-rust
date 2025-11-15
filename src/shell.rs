@@ -107,7 +107,6 @@ impl Shell {
             "type" => builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
-            // "cat" => builtins::cat(&args, redirect_stdout, redirect_stderr)?,
             _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
         }
         Ok(())
