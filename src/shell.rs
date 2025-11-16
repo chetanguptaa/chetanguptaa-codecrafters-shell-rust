@@ -87,7 +87,7 @@ impl Shell {
                                 matches.sort();
                                 matches.dedup();
                                 for m in matches {
-                                    print!("{} ", m);
+                                    print!("{}  ", m);
                                 }
                             }
                             print!("\r\n");
