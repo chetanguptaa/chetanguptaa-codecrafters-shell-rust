@@ -63,7 +63,6 @@ impl Shell {
                             Self::redraw_line(&mut stdout, &input);
                             first_tab = false;
                             common_prefix_exists = false;
-                            stdout.flush()?;
                             continue;
                         }
                         let parts = Self::parse_args(&input);
@@ -90,15 +89,14 @@ impl Shell {
                             Self::redraw_line(&mut stdout, &input);
                             first_tab = false;
                             common_prefix_exists = false;
-                            stdout.flush()?;
                             continue;
                         }
                         let lcp = Self::longest_common_prefix(&matches);
                         let has_new_lcp = lcp.len() > last.len();
                         if !first_tab {
                             first_tab = true;
-                            common_prefix_exists = true;
                             if has_new_lcp {
+                                common_prefix_exists = true;
                                 let completion = &lcp[last.len()..];
                                 input.push_str(completion);
                                 Self::redraw_line(&mut stdout, &input);
@@ -133,14 +131,12 @@ impl Shell {
                         common_prefix_exists = false;
                         input.push(c);
                         Self::redraw_line(&mut stdout, &input);
-                        stdout.flush()?;
                     }
                     Key::Backspace => {
                         first_tab = false;
                         common_prefix_exists = false;
                         input.pop();
                         Self::redraw_line(&mut stdout, &input);
-                        stdout.flush()?;
                     }
                     _ => {
                         first_tab = false;
