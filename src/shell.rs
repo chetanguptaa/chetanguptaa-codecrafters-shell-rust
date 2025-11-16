@@ -97,20 +97,15 @@ impl Shell {
                                     input.push_str(completion);
                                     input.push(' ');
                                     Self::redraw_line(&mut stdout, &input);
-                                }
-                                if matches.len() > 1 {
+                                } else if matches.len() == 0 || (matches.len() > 1 && first_tab) {
+                                    print!("\x07");
+                                } else if matches.len() > 1 && !first_tab {
                                     let lcp = Self::longest_common_prefix(&matches);
                                     if lcp.len() > last.len() {
                                         let completion = &lcp[last.len()..];
                                         input.push_str(completion);
                                         Self::redraw_line(&mut stdout, &input);
-                                        common_prefix_exists = true;
-                                    } else {
-                                        common_prefix_exists = false;
                                     }
-                                }
-                                if matches.len() == 0 {
-                                    print!("\x07");
                                 }
                             }
                         }
