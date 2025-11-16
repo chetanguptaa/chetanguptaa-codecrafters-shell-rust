@@ -134,12 +134,14 @@ impl Shell {
                         common_prefix_exists = false;
                         input.push(c);
                         Self::redraw_line(&mut stdout, &input);
+                        stdout.flush()?;
                     }
                     Key::Backspace => {
                         first_tab = false;
                         common_prefix_exists = false;
                         input.pop();
                         Self::redraw_line(&mut stdout, &input);
+                        stdout.flush()?;
                     }
                     _ => {
                         first_tab = false;
