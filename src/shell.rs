@@ -63,7 +63,7 @@ impl Shell {
                         } else {
                             first_tab = false;
                             print!("\r\n");
-                            redraw_line(&mut stdout, &input);
+                            redraw_line(&mut stdout, &input, false);
                             let parts = Self::parse_args(&input);
                             if let Some(last) = parts.last() {
                                 let mut matches: Vec<String> = self
@@ -88,10 +88,10 @@ impl Shell {
                                 matches.sort();
                                 matches.dedup();
                                 for m in matches {
-                                    println!("{} ", m);
+                                    print!("{} ", m);
                                 }
                             }
-                            redraw_line(&mut stdout, &input);
+                            redraw_line(&mut stdout, &input, true);
                             continue;
                         }
                         if input.ends_with(' ') {
@@ -124,14 +124,9 @@ impl Shell {
                                     let completion = &matches[0][last.len()..];
                                     input.push_str(completion);
                                     input.push(' ');
-                                    redraw_line(&mut stdout, &input);
+                                    redraw_line(&mut stdout, &input, true);
                                 }
-                                if matches.len() > 1 {
-                                    if first_tab {
-                                        print!("\x07"); 
-                                    }
-                                }
-                                if matches.len() == 0 {
+                                if matches.len() == 0 || (matches.len() > 1 && first_tab) {
                                     print!("\x07");
                                 }
                             }
@@ -141,12 +136,12 @@ impl Shell {
                     Key::Char(c) => {
                         first_tab = false;
                         input.push(c);
-                        redraw_line(&mut stdout, &input);
+                        redraw_line(&mut stdout, &input, true);
                     }
                     Key::Backspace => {
                         first_tab = false;
                         input.pop();
-                        redraw_line(&mut stdout, &input);
+                        redraw_line(&mut stdout, &input, true);
                     }
                     _ => {
                         first_tab = false;
@@ -318,13 +313,24 @@ impl Shell {
     }
 }
 
-fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) {
-    write!(
-        stdout,
-        "\r{}{}",
-        termion::clear::CurrentLine,
-        format!("$ {}", input)
-    )
-    .unwrap();
+fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str, is_dollar_required: bool) {
+    if is_dollar_required {
+        write!(
+            stdout,
+            "\r{}{}",
+            termion::clear::CurrentLine,
+            format!("$ {}", input)
+        )
+        .unwrap();
+    } else {
+        write!(
+            stdout,
+            "\r{}{}",
+            termion::clear::CurrentLine,
+            format!("{}", input)
+        )
+        .unwrap();
+    }
+   
     stdout.flush().unwrap();
 }
