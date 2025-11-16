@@ -58,68 +58,83 @@ impl Shell {
                         break;
                     }
                     Key::Char('\t') => {
-                        if !first_tab {
-                            first_tab = true;
-                            let parts = Self::parse_args(&input);
-                            if let Some(last) = parts.last() {
-                                let matches = self.find_completions(last);
-                                if matches.len() > 1 {
-                                    let lcp = Self::longest_common_prefix(&matches);
-                                    if lcp.len() > last.len() {
-                                        common_prefix_exists = true;
-                                    } else {
-                                        common_prefix_exists = false;
-                                    }
-                                }
-                            } 
-                        } else if !common_prefix_exists {
-                            first_tab = false;
-                            print!("\r\n");
-                            let parts = Self::parse_args(&input);
-                            if let Some(last) = parts.last() {
-                                let matches = self.find_completions(last);
-                                for m in matches {
-                                    print!("{}  ", m);
-                                }
-                            }
-                            print!("\r\n");
-                            Self::redraw_line(&mut stdout, &input);
-                            continue;
-                        }
                         if input.ends_with(' ') {
                             input.push_str("    ");
-                        } else {
-                            let parts = Self::parse_args(&input);
-                            if let Some(last) = parts.last() {
-                                let matches = self.find_completions(last);
-                                if matches.len() == 1 {
-                                    let completion = &matches[0][last.len()..];
-                                    input.push_str(completion);
-                                    input.push(' ');
-                                    Self::redraw_line(&mut stdout, &input);
-                                } else if matches.len() == 0 || (matches.len() > 1 && first_tab) {
-                                    print!("\x07");
-                                } else if matches.len() > 1 && !first_tab {
-                                    let lcp = Self::longest_common_prefix(&matches);
-                                    if lcp.len() > last.len() {
-                                        let completion = &lcp[last.len()..];
-                                        input.push_str(completion);
-                                        Self::redraw_line(&mut stdout, &input);
-                                    }
-                                }
-                            }
+                            Self::redraw_line(&mut stdout, &input);
+                            first_tab = false;
+                            common_prefix_exists = false;
+                            stdout.flush()?;
+                            continue;
                         }
-                        stdout.flush()?;
+                        let parts = Self::parse_args(&input);
+                        let (matches, last) = if let Some(last) = parts.last() {
+                            (self.find_completions(last), last)
+                        } else {
+                            print!("\x07");
+                            stdout.flush()?;
+                            first_tab = false;
+                            common_prefix_exists = false;
+                            continue;
+                        };
+                        if matches.is_empty() {
+                            print!("\x07");
+                            first_tab = false;
+                            common_prefix_exists = false;
+                            stdout.flush()?;
+                            continue;
+                        }
+                        if matches.len() == 1 {
+                            let completion = &matches[0][last.len()..];
+                            input.push_str(completion);
+                            input.push(' ');
+                            Self::redraw_line(&mut stdout, &input);
+                            first_tab = false;
+                            common_prefix_exists = false;
+                            stdout.flush()?;
+                            continue;
+                        }
+                        let lcp = Self::longest_common_prefix(&matches);
+                        let has_new_lcp = lcp.len() > last.len();
+                        if !first_tab {
+                            first_tab = true;
+                            common_prefix_exists = true;
+                            if has_new_lcp {
+                                let completion = &lcp[last.len()..];
+                                input.push_str(completion);
+                                Self::redraw_line(&mut stdout, &input);
+                                write!(stdout, "\r\n")?;
+                                for m in matches {
+                                    print!("{}  ", m); 
+                                }
+                                write!(stdout, "\r\n")?;
+                                Self::redraw_line(&mut stdout, &input);
+                                first_tab = false;
+                            } else {
+                                common_prefix_exists = false;
+                                print!("\x07");
+                            }
+                        } else {
+                        if !common_prefix_exists {
+                            write!(stdout, "\r\n")?;
+                            for m in matches {
+                                print!("{}  ", m); 
+                            }
+                            write!(stdout, "\r\n")?;
+                            Self::redraw_line(&mut stdout, &input);
+                        } else {
+                            print!("\x07");
+                        }
+                        first_tab = false;
+                        common_prefix_exists = false;
+                        }
                     }
                     Key::Char(c) => {
                         first_tab = false;
-                        common_prefix_exists = false;
                         input.push(c);
                         Self::redraw_line(&mut stdout, &input);
                     }
                     Key::Backspace => {
                         first_tab = false;
-                        common_prefix_exists = false;
                         input.pop();
                         Self::redraw_line(&mut stdout, &input);
                     }
