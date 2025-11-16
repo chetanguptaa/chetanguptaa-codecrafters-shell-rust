@@ -45,8 +45,6 @@ impl Shell {
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {
-                        first_tab = false;
-                        common_prefix_exists = false;
                         write!(stdout, "\r\n")?;
                         stdout.flush()?;
                         drop(stdout);
@@ -62,6 +60,18 @@ impl Shell {
                     Key::Char('\t') => {
                         if !first_tab {
                             first_tab = true;
+                            let parts = Self::parse_args(&input);
+                            if let Some(last) = parts.last() {
+                                let matches = self.find_completions(last);
+                                if matches.len() > 1 {
+                                    let lcp = Self::longest_common_prefix(&matches);
+                                    if lcp.len() > last.len() {
+                                        common_prefix_exists = true;
+                                    } else {
+                                        common_prefix_exists = false;
+                                    }
+                                }
+                            } 
                         } else if !common_prefix_exists {
                             first_tab = false;
                             print!("\r\n");
@@ -119,8 +129,6 @@ impl Shell {
                         Self::redraw_line(&mut stdout, &input);
                     }
                     _ => {
-                        first_tab = false;
-                        common_prefix_exists = false;
                         self.running = false;
                         break;
                     }
