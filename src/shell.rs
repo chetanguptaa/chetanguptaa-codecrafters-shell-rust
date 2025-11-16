@@ -41,10 +41,12 @@ impl Shell {
             stdout.flush()?;
             let mut input = String::new();
             let mut first_tab = false;
+            let mut common_prefix_exists = false;
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {
                         first_tab = false;
+                        common_prefix_exists = false;
                         write!(stdout, "\r\n")?;
                         stdout.flush()?;
                         drop(stdout);
@@ -60,38 +62,18 @@ impl Shell {
                     Key::Char('\t') => {
                         if !first_tab {
                             first_tab = true;
-                        } else {
+                        } else if !common_prefix_exists {
                             first_tab = false;
                             print!("\r\n");
                             let parts = Self::parse_args(&input);
                             if let Some(last) = parts.last() {
-                                let mut matches: Vec<String> = self
-                                    .builtins
-                                    .iter()
-                                    .filter(|b| b.starts_with(last))
-                                    .cloned()
-                                    .collect();
-                                if let Some(dir) = std::env::var_os("PATH") {
-                                    for path in std::env::split_paths(&dir) {
-                                        if let Ok(entries) = std::fs::read_dir(path) {
-                                            for entry in entries.flatten() {
-                                                let file_name = entry.file_name();
-                                                let file_name_str = file_name.to_string_lossy();
-                                                if file_name_str.starts_with(last) {
-                                                    matches.push(file_name_str.to_string());
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                matches.sort();
-                                matches.dedup();
+                                let matches = self.find_completions(last);
                                 for m in matches {
                                     print!("{}  ", m);
                                 }
                             }
                             print!("\r\n");
-                            redraw_line(&mut stdout, &input, true);
+                            Self::redraw_line(&mut stdout, &input);
                             continue;
                         }
                         if input.ends_with(' ') {
@@ -99,34 +81,25 @@ impl Shell {
                         } else {
                             let parts = Self::parse_args(&input);
                             if let Some(last) = parts.last() {
-                                let mut matches: Vec<String> = self
-                                    .builtins
-                                    .iter()
-                                    .filter(|b| b.starts_with(last))
-                                    .cloned()
-                                    .collect();
-                                if let Some(dir) = std::env::var_os("PATH") {
-                                    for path in std::env::split_paths(&dir) {
-                                        if let Ok(entries) = std::fs::read_dir(path) {
-                                            for entry in entries.flatten() {
-                                                let file_name = entry.file_name();
-                                                let file_name_str = file_name.to_string_lossy();
-                                                if file_name_str.starts_with(last) {
-                                                    matches.push(file_name_str.to_string());
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                matches.sort();
-                                matches.dedup();
+                                let matches = self.find_completions(last);
                                 if matches.len() == 1 {
                                     let completion = &matches[0][last.len()..];
                                     input.push_str(completion);
                                     input.push(' ');
-                                    redraw_line(&mut stdout, &input, true);
+                                    Self::redraw_line(&mut stdout, &input);
                                 }
-                                if matches.len() == 0 || (matches.len() > 1 && first_tab) {
+                                if matches.len() > 1 {
+                                    let lcp = Self::longest_common_prefix(&matches);
+                                    if lcp.len() > last.len() {
+                                        let completion = &lcp[last.len()..];
+                                        input.push_str(completion);
+                                        Self::redraw_line(&mut stdout, &input);
+                                        common_prefix_exists = true;
+                                    } else {
+                                        common_prefix_exists = false;
+                                    }
+                                }
+                                if matches.len() == 0 {
                                     print!("\x07");
                                 }
                             }
@@ -135,16 +108,19 @@ impl Shell {
                     }
                     Key::Char(c) => {
                         first_tab = false;
+                        common_prefix_exists = false;
                         input.push(c);
-                        redraw_line(&mut stdout, &input, true);
+                        Self::redraw_line(&mut stdout, &input);
                     }
                     Key::Backspace => {
                         first_tab = false;
+                        common_prefix_exists = false;
                         input.pop();
-                        redraw_line(&mut stdout, &input, true);
+                        Self::redraw_line(&mut stdout, &input);
                     }
                     _ => {
                         first_tab = false;
+                        common_prefix_exists = false;
                         self.running = false;
                         break;
                     }
@@ -165,6 +141,7 @@ impl Shell {
             None
         }
     }
+
     fn handle_input(&mut self, input: &str) -> ShellResult<()> {
         let parts: Vec<String> = Self::parse_args(input);
         if parts.is_empty() {
@@ -241,6 +218,7 @@ impl Shell {
         }
         Ok(())
     }
+
     fn parse_args(input: &str) -> Vec<String> {
         let mut args = Vec::new();
         let mut current_arg = String::new();
@@ -311,10 +289,8 @@ impl Shell {
         }
         args
     }
-}
 
-fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str, is_dollar_required: bool) {
-    if is_dollar_required {
+    fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) {
         write!(
             stdout,
             "\r{}{}",
@@ -322,15 +298,54 @@ fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str, is_dollar_required
             format!("$ {}", input)
         )
         .unwrap();
-    } else {
-        write!(
-            stdout,
-            "\r{}{}",
-            termion::clear::CurrentLine,
-            format!("{}", input)
-        )
-        .unwrap();
+        stdout.flush().unwrap();
     }
-   
-    stdout.flush().unwrap();
+    fn find_completions(&self, prefix: &str) -> Vec<String> {
+        let mut matches: Vec<String> = self
+            .builtins
+            .iter()
+            .filter(|b| b.starts_with(prefix))
+            .cloned()
+            .collect();
+        if let Some(dir) = std::env::var_os("PATH") {
+            for path in std::env::split_paths(&dir) {
+                if let Ok(entries) = std::fs::read_dir(path) {
+                    for entry in entries.flatten() {
+                        let file_name = entry.file_name();
+                        let file_name_str = file_name.to_string_lossy();
+                        if file_name_str.starts_with(prefix) {
+                            matches.push(file_name_str.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        matches.sort();
+        matches.dedup();
+        matches
+    }
+
+    fn longest_common_prefix(strs: &[String]) -> String {
+        if strs.is_empty() {
+            return String::new();
+        }
+        let first_string = &strs[0];
+        let mut common_prefix = String::new();
+        for (i, char_from_first) in first_string.chars().enumerate() {
+            for s in strs.iter().skip(1) {
+                match s.chars().nth(i) {
+                    Some(s_char) => {
+                        if s_char != char_from_first {
+                            return common_prefix;
+                        }
+                    }
+                    None => {
+                        return common_prefix;
+                    }
+                }
+            }
+            common_prefix.push(char_from_first);
+        }
+        common_prefix
+    }
 }
