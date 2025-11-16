@@ -100,12 +100,6 @@ impl Shell {
                                 let completion = &lcp[last.len()..];
                                 input.push_str(completion);
                                 Self::redraw_line(&mut stdout, &input)?;
-                                write!(stdout, "\r\n")?;
-                                for m in matches {
-                                    print!("{}  ", m); 
-                                }
-                                write!(stdout, "\r\n")?;
-                                Self::redraw_line(&mut stdout, &input)?;
                                 first_tab = false;
                             } else {
                                 common_prefix_exists = false;
