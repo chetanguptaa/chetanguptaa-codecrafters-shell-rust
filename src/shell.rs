@@ -127,7 +127,6 @@ impl Shell {
                             first_tab = false;
                             common_prefix_exists = false;
                         }
-                        stdout.flush()?;
                     }
                     Key::Char(c) => {
                         first_tab = false;
