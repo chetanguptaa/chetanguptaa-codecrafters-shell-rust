@@ -167,6 +167,7 @@ impl Shell {
         let mut args: Vec<&str> = Vec::new();
         let mut redirect_stdout: Option<&str> = None;
         let mut redirect_stderr: Option<&str> = None;
+        let mut pipeline_input: Option<&[String]> = None;
         let mut i = 1;
         while i < parts.len() {
             match parts[i].as_str() {
@@ -218,6 +219,18 @@ impl Shell {
                     redirect_stderr = Some(&parts[i + 1]);
                     i += 2;
                 }
+                "|" => {
+                    if pipeline_input.is_some() {
+                        eprintln!("shell: error: multiple pipeline input");
+                        return Ok(()); 
+                    }
+                    if i + 1 >= parts.len() {
+                        eprintln!("shell: error: missing new cmd after pipeline");
+                        return Ok(());
+                    }
+                    pipeline_input = Some(&parts[i + 1 ..]);
+                    i = parts.len();
+                }
                 _ => {
                     args.push(&parts[i]);
                     i += 1;
@@ -230,7 +243,7 @@ impl Shell {
             "type" => builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
-            _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
+            _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr, pipeline_input)?,
         }
         Ok(())
     }
