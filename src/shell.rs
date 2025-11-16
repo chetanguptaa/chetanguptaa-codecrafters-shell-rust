@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Stdout, Write};
 
-use crate::{builtins};
+use crate::builtins;
 use crate::error::ShellResult;
 use crate::exec;
 use termion::event::Key;
@@ -37,7 +37,7 @@ impl Shell {
         while self.running {
             print!("$ ");
             let stdout = io::stdout();
-            let mut stdout = stdout.into_raw_mode()?; 
+            let mut stdout = stdout.into_raw_mode()?;
             stdout.flush()?;
             let mut input = String::new();
             for key in io::stdin().keys() {
@@ -61,12 +61,27 @@ impl Shell {
                         } else {
                             let parts = Self::parse_args(&input);
                             if let Some(last) = parts.last() {
-                                let mut matches: Vec<&String> = self
+                                let mut matches: Vec<String> = self
                                     .builtins
                                     .iter()
                                     .filter(|b| b.starts_with(last))
+                                    .cloned()
                                     .collect();
+                                if let Some(dir) = std::env::var_os("PATH") {
+                                    for path in std::env::split_paths(&dir) {
+                                        if let Ok(entries) = std::fs::read_dir(path) {
+                                            for entry in entries.flatten() {
+                                                let file_name = entry.file_name();
+                                                let file_name_str = file_name.to_string_lossy();
+                                                if file_name_str.starts_with(last) {
+                                                    matches.push(file_name_str.to_string());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 matches.sort();
+                                matches.dedup();
                                 if matches.len() == 1 {
                                     let completion = &matches[0][last.len()..];
                                     input.push_str(completion);
