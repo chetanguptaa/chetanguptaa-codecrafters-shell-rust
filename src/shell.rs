@@ -40,9 +40,11 @@ impl Shell {
             let mut stdout = stdout.into_raw_mode()?;
             stdout.flush()?;
             let mut input = String::new();
+            let mut first_tab = false;
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {
+                        first_tab = false;
                         write!(stdout, "\r\n")?;
                         stdout.flush()?;
                         drop(stdout);
@@ -56,6 +58,42 @@ impl Shell {
                         break;
                     }
                     Key::Char('\t') => {
+                        if !first_tab {
+                            first_tab = true;
+                        } else {
+                            first_tab = false;
+                            print!("\r\n");
+                            redraw_line(&mut stdout, &input);
+                            let parts = Self::parse_args(&input);
+                            if let Some(last) = parts.last() {
+                                let mut matches: Vec<String> = self
+                                    .builtins
+                                    .iter()
+                                    .filter(|b| b.starts_with(last))
+                                    .cloned()
+                                    .collect();
+                                if let Some(dir) = std::env::var_os("PATH") {
+                                    for path in std::env::split_paths(&dir) {
+                                        if let Ok(entries) = std::fs::read_dir(path) {
+                                            for entry in entries.flatten() {
+                                                let file_name = entry.file_name();
+                                                let file_name_str = file_name.to_string_lossy();
+                                                if file_name_str.starts_with(last) {
+                                                    matches.push(file_name_str.to_string());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                matches.sort();
+                                matches.dedup();
+                                for m in matches {
+                                    println!("{} ", m);
+                                }
+                            }
+                            redraw_line(&mut stdout, &input);
+                            continue;
+                        }
                         if input.ends_with(' ') {
                             input.push_str("    ");
                         } else {
@@ -88,6 +126,11 @@ impl Shell {
                                     input.push(' ');
                                     redraw_line(&mut stdout, &input);
                                 }
+                                if matches.len() > 1 {
+                                    if first_tab {
+                                        print!("\x07"); 
+                                    }
+                                }
                                 if matches.len() == 0 {
                                     print!("\x07");
                                 }
@@ -96,14 +139,17 @@ impl Shell {
                         stdout.flush()?;
                     }
                     Key::Char(c) => {
+                        first_tab = false;
                         input.push(c);
                         redraw_line(&mut stdout, &input);
                     }
                     Key::Backspace => {
+                        first_tab = false;
                         input.pop();
                         redraw_line(&mut stdout, &input);
                     }
                     _ => {
+                        first_tab = false;
                         self.running = false;
                         break;
                     }
