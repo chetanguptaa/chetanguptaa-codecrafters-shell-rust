@@ -71,9 +71,9 @@ impl Shell {
                             (self.find_completions(last), last)
                         } else {
                             print!("\x07");
-                            stdout.flush()?;
                             first_tab = false;
                             common_prefix_exists = false;
+                            stdout.flush()?;
                             continue;
                         };
                         if matches.is_empty() {
@@ -114,31 +114,35 @@ impl Shell {
                                 print!("\x07");
                             }
                         } else {
-                        if !common_prefix_exists {
-                            write!(stdout, "\r\n")?;
-                            for m in matches {
-                                print!("{}  ", m); 
+                            if !common_prefix_exists {
+                                write!(stdout, "\r\n")?;
+                                for m in matches {
+                                    print!("{}  ", m); 
+                                }
+                                write!(stdout, "\r\n")?;
+                                Self::redraw_line(&mut stdout, &input);
+                            } else {
+                                print!("\x07");
                             }
-                            write!(stdout, "\r\n")?;
-                            Self::redraw_line(&mut stdout, &input);
-                        } else {
-                            print!("\x07");
-                        }
-                        first_tab = false;
-                        common_prefix_exists = false;
+                            first_tab = false;
+                            common_prefix_exists = false;
                         }
                     }
                     Key::Char(c) => {
                         first_tab = false;
+                        common_prefix_exists = false;
                         input.push(c);
                         Self::redraw_line(&mut stdout, &input);
                     }
                     Key::Backspace => {
                         first_tab = false;
+                        common_prefix_exists = false;
                         input.pop();
                         Self::redraw_line(&mut stdout, &input);
                     }
                     _ => {
+                        first_tab = false;
+                        common_prefix_exists = false;
                         self.running = false;
                         break;
                     }
