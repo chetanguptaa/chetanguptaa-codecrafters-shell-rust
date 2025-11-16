@@ -63,7 +63,6 @@ impl Shell {
                         } else {
                             first_tab = false;
                             print!("\r\n");
-                            redraw_line(&mut stdout, &input, false);
                             let parts = Self::parse_args(&input);
                             if let Some(last) = parts.last() {
                                 let mut matches: Vec<String> = self
@@ -91,6 +90,7 @@ impl Shell {
                                     print!("{} ", m);
                                 }
                             }
+                            print!("\r\n");
                             redraw_line(&mut stdout, &input, true);
                             continue;
                         }
