@@ -60,7 +60,7 @@ impl Shell {
                     Key::Char('\t') => {
                         if input.ends_with(' ') {
                             input.push_str("    ");
-                            Self::redraw_line(&mut stdout, &input);
+                            Self::redraw_line(&mut stdout, &input)?;
                             first_tab = false;
                             common_prefix_exists = false;
                             continue;
@@ -86,7 +86,7 @@ impl Shell {
                             let completion = &matches[0][last.len()..];
                             input.push_str(completion);
                             input.push(' ');
-                            Self::redraw_line(&mut stdout, &input);
+                            Self::redraw_line(&mut stdout, &input)?;
                             first_tab = false;
                             common_prefix_exists = false;
                             continue;
@@ -99,17 +99,18 @@ impl Shell {
                                 common_prefix_exists = true;
                                 let completion = &lcp[last.len()..];
                                 input.push_str(completion);
-                                Self::redraw_line(&mut stdout, &input);
+                                Self::redraw_line(&mut stdout, &input)?;
                                 write!(stdout, "\r\n")?;
                                 for m in matches {
                                     print!("{}  ", m); 
                                 }
                                 write!(stdout, "\r\n")?;
-                                Self::redraw_line(&mut stdout, &input);
+                                Self::redraw_line(&mut stdout, &input)?;
                                 first_tab = false;
                             } else {
                                 common_prefix_exists = false;
                                 print!("\x07");
+                                stdout.flush()?;
                             }
                         } else {
                             if !common_prefix_exists {
@@ -118,9 +119,10 @@ impl Shell {
                                     print!("{}  ", m); 
                                 }
                                 write!(stdout, "\r\n")?;
-                                Self::redraw_line(&mut stdout, &input);
+                                Self::redraw_line(&mut stdout, &input)?;
                             } else {
                                 print!("\x07");
+                                stdout.flush()?;
                             }
                             first_tab = false;
                             common_prefix_exists = false;
@@ -130,13 +132,13 @@ impl Shell {
                         first_tab = false;
                         common_prefix_exists = false;
                         input.push(c);
-                        Self::redraw_line(&mut stdout, &input);
+                        Self::redraw_line(&mut stdout, &input)?;
                     }
                     Key::Backspace => {
                         first_tab = false;
                         common_prefix_exists = false;
                         input.pop();
-                        Self::redraw_line(&mut stdout, &input);
+                        Self::redraw_line(&mut stdout, &input)?;
                     }
                     _ => {
                         first_tab = false;
@@ -310,16 +312,17 @@ impl Shell {
         args
     }
 
-    fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) {
+    fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) -> ShellResult<()>{
         write!(
             stdout,
             "\r{}{}",
             termion::clear::CurrentLine,
             format!("$ {}", input)
-        )
-        .unwrap();
-        stdout.flush().unwrap();
+        )?;
+        stdout.flush()?;
+        Ok(())
     }
+
     fn find_completions(&self, prefix: &str) -> Vec<String> {
         let mut matches: Vec<String> = self
             .builtins
