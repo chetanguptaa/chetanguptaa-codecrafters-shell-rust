@@ -2,7 +2,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::io::Write;
+use std::io::{self, Write};
 
 use crate::builtins;
 use crate::error::ShellResult;
@@ -27,49 +27,54 @@ pub fn run_external(
     args: &[&str],
     redirect_out: Option<&str>,
     redirect_err: Option<&str>,
-    pipeline_input: Option<&[String]>,
+    pipeline: Option<&[String]>,
 ) -> ShellResult<()> {
     let mut out_handle = builtins::get_output_stream(redirect_out)?;
     let mut err_handle = builtins::get_output_stream(redirect_err)?;
-    match shell.resolve_command(cmd) {
-        None => {
-            writeln!(err_handle, "{cmd}: command not found")?;
-            return Ok(());
-        }
-        Some(_) => {}
+    if shell.resolve_command(cmd).is_none() {
+        writeln!(err_handle, "{cmd}: command not found")?;
+        return Ok(());
     }
-     let mut first_child = Command::new(cmd)
-        .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
-    let mut previous_stdout = first_child.stdout.take();
-    if let Some(pipe_cmd) = pipeline_input {
-        if !pipe_cmd.is_empty() {
-            let pipe_cmd_name = &pipe_cmd[0];
-            let pipe_cmd_args = &pipe_cmd[1..];
-            let mut pipe_child = Command::new(pipe_cmd_name)
-                .args(pipe_cmd_args)
-                .stdin(Stdio::from(previous_stdout.take().unwrap()))
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()?;
-            _ = pipe_child.stdout.take();
-            let output = pipe_child.wait_with_output()?;
-            write!(out_handle, "{}", String::from_utf8_lossy(&output.stdout))?;
-            write!(err_handle, "{}", String::from_utf8_lossy(&output.stderr))?;
-            let _ = first_child.wait();
-            return Ok(());
+    let mut stages: Vec<(String, Vec<String>)> = Vec::new();
+    stages.push((
+        cmd.to_string(),
+        args.iter().map(|s| s.to_string()).collect(),
+    ));
+    if let Some(rest) = pipeline {
+        if !rest.is_empty() {
+            let prog = rest[0].clone();
+            let prog_args = rest[1..].to_vec();
+            stages.push((prog, prog_args));
         }
     }
-    if let Some(stdout) = previous_stdout {
-        use std::io::{BufRead, BufReader};
-        let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            let line = line?;
-            writeln!(out_handle, "{}", line)?;
+    let mut children = Vec::new();
+    let mut prev_stdout: Option<std::process::ChildStdout> = None;
+    for (i, (prog, prog_args)) in stages.iter().enumerate() {
+        let is_last = i == stages.len() - 1;
+        let mut cmd = Command::new(prog);
+        cmd.args(prog_args);
+        if let Some(stdin_src) = prev_stdout.take() {
+            cmd.stdin(Stdio::from(stdin_src));
+        } else {
+            cmd.stdin(Stdio::inherit());
         }
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+        let mut child = cmd.spawn()?;
+        if !is_last {
+            prev_stdout = Some(child
+                .stdout
+                .take()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "child has no stdout"))?);
+        }
+        children.push(child);
     }
-    let _ = first_child.wait();
-    Ok(()) 
+    let last = children.pop().unwrap();
+    let output = last.wait_with_output()?;
+    out_handle.write_all(&output.stdout)?;
+    err_handle.write_all(&output.stderr)?;
+    for mut child in children {
+        let _ = child.wait();
+    }
+    Ok(())
 }
