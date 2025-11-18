@@ -245,11 +245,7 @@ impl Shell {
                 }
             }
             "type" => {
-                if pipeline_input.is_none() {
-                    builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?;
-                } else {
-                    exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr, pipeline_input)?;
-                }
+                builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?;
             }
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
