@@ -1,8 +1,8 @@
 use std::fs;
+use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::io::{self, Write};
 
 use crate::builtins;
 use crate::error::ShellResult;
@@ -67,10 +67,12 @@ pub fn run_external(
         }
         let mut child = cmd.spawn()?;
         if !is_last {
-            prev_stdout = Some(child
-                .stdout
-                .take()
-                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "child has no stdout"))?);
+            prev_stdout = Some(
+                child
+                    .stdout
+                    .take()
+                    .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "child has no stdout"))?,
+            );
         }
         children.push(child);
     }

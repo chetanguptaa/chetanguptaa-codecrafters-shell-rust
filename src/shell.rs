@@ -110,7 +110,7 @@ impl Shell {
                             if !common_prefix_exists {
                                 write!(stdout, "\r\n")?;
                                 for m in matches {
-                                    print!("{}  ", m); 
+                                    print!("{}  ", m);
                                 }
                                 write!(stdout, "\r\n")?;
                                 Self::redraw_line(&mut stdout, &input)?;
@@ -220,13 +220,13 @@ impl Shell {
                 "|" => {
                     if pipeline_input.is_some() {
                         eprintln!("shell: error: multiple pipeline input");
-                        return Ok(()); 
+                        return Ok(());
                     }
                     if i + 1 >= parts.len() {
                         eprintln!("shell: error: missing new cmd after pipeline");
                         return Ok(());
                     }
-                    pipeline_input = Some(&parts[i + 1 ..]);
+                    pipeline_input = Some(&parts[i + 1..]);
                     i = parts.len();
                 }
                 _ => {
@@ -241,7 +241,14 @@ impl Shell {
                 if pipeline_input.is_none() {
                     builtins::echo(&args, redirect_stdout, redirect_stderr)?;
                 } else {
-                   exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr, pipeline_input)?; 
+                    exec::run_external(
+                        self,
+                        cmd,
+                        &args,
+                        redirect_stdout,
+                        redirect_stderr,
+                        pipeline_input,
+                    )?;
                 }
             }
             "type" => {
@@ -249,7 +256,49 @@ impl Shell {
             }
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
-            _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr, pipeline_input)?,
+            _ => {
+                if let Some(_) = pipeline_input {
+                    let mut stages: Vec<(String, Vec<String>)> = Vec::new();
+                    stages.push((
+                        cmd.to_string(),
+                        args.iter().map(|s| s.to_string()).collect(),
+                    ));
+                    if let Some(rest) = pipeline_input {
+                        if !rest.is_empty() {
+                            let prog = rest[0].clone();
+                            let prog_args = rest[1..].to_vec();
+                            stages.push((prog.clone(), prog_args.clone()));
+                            if prog == "type" {
+                                let prog_args_refs: Vec<&str> = prog_args.iter().map(|s| s.as_str()).collect();
+                                builtins::r#type(
+                                    self,
+                                    &prog_args_refs,
+                                    redirect_stdout,
+                                    redirect_stderr,
+                                )?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                    exec::run_external(
+                        self,
+                        cmd,
+                        &args,
+                        redirect_stdout,
+                        redirect_stderr,
+                        pipeline_input,
+                    )?;
+                } else {
+                    exec::run_external(
+                        self,
+                        cmd,
+                        &args,
+                        redirect_stdout,
+                        redirect_stderr,
+                        pipeline_input,
+                    )?;
+                }
+            }
         }
         Ok(())
     }
@@ -325,7 +374,7 @@ impl Shell {
         args
     }
 
-    fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) -> ShellResult<()>{
+    fn redraw_line(stdout: &mut RawTerminal<Stdout>, input: &str) -> ShellResult<()> {
         write!(
             stdout,
             "\r{}{}",
