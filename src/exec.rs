@@ -58,8 +58,13 @@ pub fn run_external(
         } else {
             cmd.stdin(Stdio::inherit());
         }
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
+        if is_last {
+            cmd.stdout(Stdio::inherit());
+            cmd.stderr(Stdio::inherit());
+        } else {
+            cmd.stdout(Stdio::piped());
+            cmd.stderr(Stdio::piped());
+        }
         let mut child = cmd.spawn()?;
         if !is_last {
             prev_stdout = Some(child

@@ -135,8 +135,6 @@ impl Shell {
                         Self::redraw_line(&mut stdout, &input)?;
                     }
                     _ => {
-                        first_tab = false;
-                        common_prefix_exists = false;
                         self.running = false;
                         break;
                     }
