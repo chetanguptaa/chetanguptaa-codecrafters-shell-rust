@@ -239,7 +239,7 @@ impl Shell {
             "exit" => self.running = false,
             "echo" => {
                 if pipeline_input.is_none() {
-                    builtins::echo(&args, redirect_stdout, redirect_stderr, pipeline_input)?;
+                    builtins::echo(&args, redirect_stdout, redirect_stderr)?;
                 } else {
                    exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr, pipeline_input)?; 
                 }
