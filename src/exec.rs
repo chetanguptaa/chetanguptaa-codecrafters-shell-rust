@@ -58,7 +58,7 @@ pub fn run_external(
         } else {
             cmd.stdin(Stdio::inherit());
         }
-        if is_last {
+        if is_last && pipeline.is_some() {
             cmd.stdout(Stdio::inherit());
             cmd.stderr(Stdio::inherit());
         } else {
