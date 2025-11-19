@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use nix::errno::Errno;
 use std::io;
 
 pub type ShellResult<T> = Result<T, ShellError>;
@@ -24,5 +25,11 @@ impl std::fmt::Display for ShellError {
 impl From<io::Error> for ShellError {
     fn from(err: io::Error) -> Self {
         ShellError::Io(err)
+    }
+}
+
+impl From<Errno> for ShellError {
+    fn from(err: Errno) -> Self {
+        ShellError::Io(io::Error::from_raw_os_error(err as i32))
     }
 }

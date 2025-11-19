@@ -2,7 +2,7 @@ use crate::error::{ShellError, ShellResult};
 use crate::shell::Shell;
 use std::env;
 use std::fs::OpenOptions;
-use std::io::{self, BufWriter, Write};
+use std::io::{self, Write};
 use std::path::Path;
 
 pub fn get_output_stream(redirect_out: Option<&str>) -> ShellResult<Box<dyn Write>> {
@@ -19,7 +19,7 @@ pub fn get_output_stream(redirect_out: Option<&str>) -> ShellResult<Box<dyn Writ
                 .append(true)
                 .write(true)
                 .open(path)?;
-            Ok(Box::new(BufWriter::new(file)))
+            Ok(Box::new(file))
         }
         None => Ok(Box::new(io::stdout())),
     }
@@ -31,21 +31,25 @@ pub fn echo(
     redirect_stderr: Option<&str>,
 ) -> ShellResult<()> {
     let mut out_handle = get_output_stream(redirect_stdout)?;
-    let _err_handle = get_output_stream(redirect_stderr)?;
+    let mut err_handle = get_output_stream(redirect_stderr)?;
     if args.is_empty() {
         writeln!(out_handle, "")?;
     } else {
         let output = args.join(" ");
         writeln!(out_handle, "{}", output)?;
     }
+    out_handle.flush()?;
+    err_handle.flush()?;
     Ok(())
 }
 
 pub fn pwd(redirect_stdout: Option<&str>, redirect_stderr: Option<&str>) -> ShellResult<()> {
     let mut out_handle = get_output_stream(redirect_stdout)?;
-    let _err_handle = get_output_stream(redirect_stderr)?;
+    let mut err_handle = get_output_stream(redirect_stderr)?;
     let dir = env::current_dir()?;
     writeln!(out_handle, "{}", dir.display())?;
+    out_handle.flush()?;
+    err_handle.flush()?;
     Ok(())
 }
 
@@ -64,7 +68,7 @@ pub fn cd(args: &[&str]) -> ShellResult<()> {
     Ok(())
 }
 
-pub fn r#type(
+pub fn cmd_type(
     shell: &mut Shell,
     args: &[&str],
     redirect_stdout: Option<&str>,
@@ -85,5 +89,7 @@ pub fn r#type(
         }
         None => writeln!(err_handle, "{}: not found", name)?,
     }
+    out_handle.flush()?;
+    err_handle.flush()?;
     Ok(())
 }
