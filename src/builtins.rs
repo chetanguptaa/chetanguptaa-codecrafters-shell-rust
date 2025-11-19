@@ -95,7 +95,7 @@ pub fn cmd_type(
 }
 
 pub fn history(
-    shell: &Shell,
+    shell: &mut Shell,
     args: &[&str],
     redirect_stdout: Option<&str>,
     redirect_stderr: Option<&str>,
@@ -103,25 +103,45 @@ pub fn history(
     let mut out_handle = get_output_stream(redirect_stdout)?;
     let mut err_handle = get_output_stream(redirect_stderr)?;
     if args.len() > 0 {
-        let mut i = args.len() - 1;
-        while i < args.len() {
-            let arg = args[i];
-            match arg.parse::<usize>() {
-                Ok(n) => {
-                    let start = if n > shell.history.len() {
-                        0
-                    } else {
-                        shell.history.len() - n
-                    };
-                    for (index, command) in shell.history[start..].iter().enumerate() {
-                        writeln!(out_handle, "    {} {}", start + index + 1, command)?;
+        if args[0] == "-r" && args.len() <= 1 {
+            return Err(ShellError::InvalidInput("history: missing argument".into()));
+        } else if args[0] == "-r" && args.len() > 1 {
+            let history_file = args[1];
+            if history_file.is_empty() {
+                return Err(ShellError::InvalidInput("history: missing argument".into()));
+            }
+            let content = std::fs::read_to_string(history_file);
+            match content {
+                Ok(data) => {
+                    for (_, line) in data.lines().enumerate() {
+                        shell.history.push(line.to_string());
                     }
                 }
-                Err(_) => {
-                    writeln!(err_handle, "history: {}: invalid number", arg)?;
+                Err(e) => {
+                    writeln!(err_handle, "history: {}: {}", history_file, e)?;
                 }
+            } 
+        } else {
+            let mut i = args.len() - 1;
+            while i < args.len() {
+                let arg = args[i];
+                match arg.parse::<usize>() {
+                    Ok(n) => {
+                        let start = if n > shell.history.len() {
+                            0
+                        } else {
+                            shell.history.len() - n
+                        };
+                        for (index, command) in shell.history[start..].iter().enumerate() {
+                            writeln!(out_handle, "    {} {}", start + index + 1, command)?;
+                        }
+                    }
+                    Err(_) => {
+                        writeln!(err_handle, "history: {}: invalid number", arg)?;
+                    }
+                }
+                i -= 1;
             }
-            i -= 1;
         }
     } else {
         for (index, command) in shell.history.iter().enumerate() {
