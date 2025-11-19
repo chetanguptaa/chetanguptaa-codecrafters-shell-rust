@@ -143,7 +143,12 @@ pub fn history(
                 .create(true)
                 .append(true)
                 .open(history_file)?;
-            for command in &shell.history {
+            let content = std::fs::read_to_string(history_file);
+            let file_history_len = match content {
+                Ok(data) => data.lines().count(),
+                Err(_) => 0,
+            };
+            for command in &shell.history[file_history_len..] {
                 writeln!(file, "{}", command)?;
             }
         }
