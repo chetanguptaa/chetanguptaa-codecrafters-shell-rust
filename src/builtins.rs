@@ -120,7 +120,8 @@ pub fn history(
                 Err(e) => {
                     writeln!(err_handle, "history: {}: {}", history_file, e)?;
                 }
-            } 
+            }
+            shell.history_file_index = shell.history.len();
         } else if args[0] == "-w" && args.len() > 1 {
             let history_file = args[1];
             if history_file.is_empty() {
@@ -134,6 +135,7 @@ pub fn history(
             for command in &shell.history {
                 writeln!(file, "{}", command)?;
             }
+            shell.history_file_index = shell.history.len();
         } else if args[0] == "-a" && args.len() > 1 {
             let history_file = args[1];
             if history_file.is_empty() {
@@ -143,14 +145,13 @@ pub fn history(
                 .create(true)
                 .append(true)
                 .open(history_file)?;
-            let content = std::fs::read_to_string(history_file);
-            let file_history_len = match content {
-                Ok(data) => data.lines().count(),
-                Err(_) => 0,
-            };
-            for command in &shell.history[file_history_len..] {
-                writeln!(file, "{}", command)?;
+            let start = shell.history_file_index;
+            let end = shell.history.len();
+            for cmd in &shell.history[start..end] {
+                writeln!(file, "{}", cmd)?;
             }
+            shell.history_file_index = end;
+
         }
         else {
             let mut i = args.len() - 1;
