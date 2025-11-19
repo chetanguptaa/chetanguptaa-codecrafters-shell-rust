@@ -261,7 +261,7 @@ impl Shell {
             "type" => builtins::cmd_type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
-            "history" => builtins::history(self, redirect_stdout, redirect_stderr)?,
+            "history" => builtins::history(self, &args, redirect_stdout, redirect_stderr)?,
             _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
         }
         Ok(())

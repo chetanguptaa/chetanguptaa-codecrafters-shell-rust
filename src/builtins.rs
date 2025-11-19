@@ -96,14 +96,39 @@ pub fn cmd_type(
 
 pub fn history(
     shell: &Shell,
+    args: &[&str],
     redirect_stdout: Option<&str>,
     redirect_stderr: Option<&str>,
 ) -> ShellResult<()> {
     let mut out_handle = get_output_stream(redirect_stdout)?;
     let mut err_handle = get_output_stream(redirect_stderr)?;
-    for (index, command) in shell.history.iter().enumerate() {
-        writeln!(out_handle, "    {} {}", index + 1, command)?;
+    if args.len() > 0 {
+        let mut i = args.len() - 1;
+        while i < args.len() {
+            let arg = args[i];
+            match arg.parse::<usize>() {
+                Ok(n) => {
+                    let start = if n > shell.history.len() {
+                        0
+                    } else {
+                        shell.history.len() - n
+                    };
+                    for (index, command) in shell.history[start..].iter().enumerate() {
+                        writeln!(out_handle, "    {} {}", start + index + 1, command)?;
+                    }
+                }
+                Err(_) => {
+                    writeln!(err_handle, "history: {}: invalid number", arg)?;
+                }
+            }
+            i -= 1;
+        }
+    } else {
+        for (index, command) in shell.history.iter().enumerate() {
+            writeln!(out_handle, "    {} {}", index + 1, command)?;
+        }
     }
+
     out_handle.flush()?;
     err_handle.flush()?;
     Ok(())
