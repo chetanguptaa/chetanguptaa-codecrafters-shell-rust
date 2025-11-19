@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::io::{self, Stdout, Write};
 
 use crate::builtins;
@@ -48,6 +49,15 @@ impl Shell {
             let mut input = String::new();
             let mut first_tab = false;
             let mut common_prefix_exists = false;
+            let history_file = env::var("HISTFILE").ok();
+            if let Some(ref file) = history_file {
+                let content = std::fs::read_to_string(file);
+                if let Ok(data) = content {
+                    for (_, line) in data.lines().enumerate() {
+                        self.history.push(line.to_string());
+                    }
+                }
+            }
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {
