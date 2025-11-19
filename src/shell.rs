@@ -136,6 +136,17 @@ impl Shell {
                         input.pop();
                         Self::redraw_line(&mut stdout, &input)?;
                     }
+                    Key::Up => {
+                        first_tab = false;
+                        common_prefix_exists = false;
+                        if let Some(last_command) = self.history.last() {
+                            input = last_command.clone();
+                            Self::redraw_line(&mut stdout, &input)?;
+                        } else {
+                            print!("\x07");
+                            stdout.flush()?;
+                        }
+                    }
                     _ => {
                         self.running = false;
                         break;
