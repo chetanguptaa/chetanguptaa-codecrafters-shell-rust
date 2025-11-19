@@ -257,15 +257,8 @@ impl Shell {
             "echo" => builtins::echo(&args, redirect_stdout, redirect_stderr)?,
             "type" => builtins::cmd_type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
-            "cd" => builtins::cd(&args)?, 
-            _ => exec::run_pipeline(
-                self,
-                cmd,
-                &args,
-                redirect_stdout,
-                redirect_stderr,
-                pipeline,
-            )?,
+            "cd" => builtins::cd(&args)?,
+            _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
         }
         Ok(())
     }
