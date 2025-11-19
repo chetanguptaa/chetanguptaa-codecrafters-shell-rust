@@ -191,9 +191,9 @@ pub fn exit(shell: &mut Shell) -> ShellResult<()> {
     if let Some(ref file) = history_file {
         let mut file = OpenOptions::new()
             .create(true)
-            .append(true)
+            .truncate(true)
             .open(file)?;
-        let start = shell.history_file_index;
+        let start = 0;
         let end = shell.history.len();
         for cmd in &shell.history[start - 1..end] {
             writeln!(file, "{}", cmd)?;
