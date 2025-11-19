@@ -53,11 +53,15 @@ impl Shell {
             if let Some(ref file) = history_file {
                 let content = std::fs::read_to_string(file);
                 if let Ok(data) = content {
-                    for (_, line) in data.lines().enumerate() {
-                        self.history.push(line.to_string());
+                    if data.lines().count() > self.history.len() {
+                        self.history.clear();
+                        for line in data.lines() {
+                            self.history.push(line.to_string());
+                        }
                     }
                 }
             }
+            self.history_file_index = self.history.len();
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {

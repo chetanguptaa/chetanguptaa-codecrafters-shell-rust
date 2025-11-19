@@ -195,7 +195,7 @@ pub fn exit(shell: &mut Shell) -> ShellResult<()> {
             .open(file)?;
         let start = shell.history_file_index;
         let end = shell.history.len();
-        for cmd in &shell.history[start..end] {
+        for cmd in &shell.history[start - 1..end] {
             writeln!(file, "{}", cmd)?;
         }
     }
