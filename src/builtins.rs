@@ -185,3 +185,20 @@ pub fn history(
     err_handle.flush()?;
     Ok(())
 }
+
+pub fn exit(shell: &mut Shell) -> ShellResult<()> {
+    let history_file = env::var("HISTFILE").ok();
+    if let Some(ref file) = history_file {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(file)?;
+        let start = shell.history_file_index;
+        let end = shell.history.len();
+        for cmd in &shell.history[start..end] {
+            writeln!(file, "{}", cmd)?;
+        }
+    }
+    shell.running = false;
+    Ok(())
+}

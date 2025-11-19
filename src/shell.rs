@@ -13,8 +13,8 @@ pub struct Shell {
     pub builtins: HashSet<String>,
     pub history: Vec<String>,
     pub history_file_index: usize,
+    pub running: bool,
     path_cache: HashMap<String, std::path::PathBuf>,
-    running: bool,
     up_arrow_count: usize,
 }
 
@@ -301,7 +301,7 @@ impl Shell {
             );
         }
         match cmd.as_str() {
-            "exit" => self.running = false,
+            "exit" => builtins::exit(self)?,
             "echo" => builtins::echo(&args, redirect_stdout, redirect_stderr)?,
             "type" => builtins::cmd_type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
