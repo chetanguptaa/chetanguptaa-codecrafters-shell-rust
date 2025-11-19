@@ -12,7 +12,6 @@ use termion::raw::{IntoRawMode, RawTerminal};
 pub struct Shell {
     pub builtins: HashSet<String>,
     pub history: Vec<String>,
-    pub history_file_index: usize,
     pub running: bool,
     path_cache: HashMap<String, std::path::PathBuf>,
     up_arrow_count: usize,
@@ -35,7 +34,6 @@ impl Shell {
             builtins,
             path_cache: HashMap::new(),
             history: Vec::new(),
-            history_file_index: 0,
             running: true,
             up_arrow_count: 0,
         }
@@ -61,7 +59,6 @@ impl Shell {
                     }
                 }
             }
-            self.history_file_index = self.history.len();
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {

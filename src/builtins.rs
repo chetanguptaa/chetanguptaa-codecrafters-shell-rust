@@ -121,7 +121,6 @@ pub fn history(
                     writeln!(err_handle, "history: {}: {}", history_file, e)?;
                 }
             }
-            shell.history_file_index = shell.history.len();
         } else if args[0] == "-w" && args.len() > 1 {
             let history_file = args[1];
             if history_file.is_empty() {
@@ -135,7 +134,6 @@ pub fn history(
             for command in &shell.history {
                 writeln!(file, "{}", command)?;
             }
-            shell.history_file_index = shell.history.len();
         } else if args[0] == "-a" && args.len() > 1 {
             let history_file = args[1];
             if history_file.is_empty() {
@@ -143,15 +141,13 @@ pub fn history(
             }
             let mut file = OpenOptions::new()
                 .create(true)
-                .append(true)
+                .write(true) 
+                .truncate(true)
                 .open(history_file)?;
-            let start = shell.history_file_index;
             let end = shell.history.len();
-            for cmd in &shell.history[start..end] {
+            for cmd in &shell.history[0..end] {
                 writeln!(file, "{}", cmd)?;
             }
-            shell.history_file_index = end;
-
         }
         else {
             let mut i = args.len() - 1;
@@ -180,7 +176,6 @@ pub fn history(
             writeln!(out_handle, "    {} {}", index + 1, command)?;
         }
     }
-
     out_handle.flush()?;
     err_handle.flush()?;
     Ok(())
@@ -193,7 +188,6 @@ pub fn exit(shell: &mut Shell) -> ShellResult<()> {
             .write(true) 
             .truncate(true)
             .open(file_path)?;
-
         for cmd in &shell.history {
             writeln!(file, "{}", cmd)?;
         }
