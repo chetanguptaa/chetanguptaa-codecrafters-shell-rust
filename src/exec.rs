@@ -27,7 +27,39 @@ pub fn run_external(
     args: &[&str],
     redirect_out: Option<&str>,
     redirect_err: Option<&str>,
-    pipeline: Option<&[String]>,
+) -> ShellResult<()> {
+    let mut out_handle = builtins::get_output_stream(redirect_out)?;
+    let mut err_handle = builtins::get_output_stream(redirect_err)?;
+
+    match shell.resolve_command(cmd) {
+        Some(_) => {
+            let output = Command::new(cmd).args(args).output()?;
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            write!(out_handle, "{}", stdout)?;
+            if !output.status.success() {
+                if redirect_out.is_some() {
+                    write!(err_handle, "{}", stderr)?;
+                } else {
+                    write!(err_handle, "{}", stderr)?;
+                }
+            }
+            return Ok(());
+        }
+        None => {
+            writeln!(err_handle, "{cmd}: command not found")?;
+            return Ok(());
+        }
+    }
+}
+
+pub fn run_pipeline(
+    shell: &mut Shell,
+    cmd: &str,
+    args: &[&str],
+    redirect_out: Option<&str>,
+    redirect_err: Option<&str>,
+    pipeline: Vec<Vec<&str>>,
 ) -> ShellResult<()> {
     let mut out_handle = builtins::get_output_stream(redirect_out)?;
     let mut err_handle = builtins::get_output_stream(redirect_err)?;
@@ -40,12 +72,13 @@ pub fn run_external(
         cmd.to_string(),
         args.iter().map(|s| s.to_string()).collect(),
     ));
-    if let Some(rest) = pipeline {
-        if !rest.is_empty() {
-            let prog = rest[0].clone();
-            let prog_args = rest[1..].to_vec();
-            stages.push((prog, prog_args));
+    for stage in &pipeline {
+        if stage.is_empty() {
+            continue;
         }
+        let prog = stage[0].to_string();
+        let prog_args = stage[1..].iter().map(|s| s.to_string()).collect();
+        stages.push((prog, prog_args));
     }
     let mut children = Vec::new();
     let mut prev_stdout: Option<std::process::ChildStdout> = None;
@@ -58,7 +91,7 @@ pub fn run_external(
         } else {
             cmd.stdin(Stdio::inherit());
         }
-        if is_last && pipeline.is_some() {
+        if is_last {
             cmd.stdout(Stdio::inherit());
             cmd.stderr(Stdio::inherit());
         } else {

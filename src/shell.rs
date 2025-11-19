@@ -165,7 +165,7 @@ impl Shell {
         let mut args: Vec<&str> = Vec::new();
         let mut redirect_stdout: Option<&str> = None;
         let mut redirect_stderr: Option<&str> = None;
-        let mut pipeline_input: Option<&[String]> = None;
+        let mut pipeline: Vec<Vec<&str>> = Vec::new();
         let mut i = 1;
         while i < parts.len() {
             match parts[i].as_str() {
@@ -218,16 +218,23 @@ impl Shell {
                     i += 2;
                 }
                 "|" => {
-                    if pipeline_input.is_some() {
-                        eprintln!("shell: error: multiple pipeline input");
-                        return Ok(());
-                    }
                     if i + 1 >= parts.len() {
                         eprintln!("shell: error: missing new cmd after pipeline");
                         return Ok(());
                     }
-                    pipeline_input = Some(&parts[i + 1..]);
-                    i = parts.len();
+                    let mut stage: Vec<&str> = Vec::new();
+                    stage.push(&parts[i + 1]);
+                    let mut j = i + 2;
+                    while j < parts.len() && parts[j] != "|" {
+                        stage.push(&parts[j]);
+                        j += 1;
+                    }
+                    if stage.is_empty() {
+                        eprintln!("shell: error: empty pipeline stage");
+                        return Ok(());
+                    }
+                    pipeline.push(stage);
+                    i = j;
                 }
                 _ => {
                     args.push(&parts[i]);
@@ -235,70 +242,23 @@ impl Shell {
                 }
             }
         }
+        if pipeline.len() > 0 {
+            return exec::run_pipeline(
+                self,
+                cmd,
+                &args,
+                redirect_stdout,
+                redirect_stderr,
+                pipeline,
+            );
+        }
         match cmd.as_str() {
             "exit" => self.running = false,
-            "echo" => {
-                if pipeline_input.is_none() {
-                    builtins::echo(&args, redirect_stdout, redirect_stderr)?;
-                } else {
-                    exec::run_external(
-                        self,
-                        cmd,
-                        &args,
-                        redirect_stdout,
-                        redirect_stderr,
-                        pipeline_input,
-                    )?;
-                }
-            }
-            "type" => {
-                builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?;
-            }
+            "echo" => builtins::echo(&args, redirect_stdout, redirect_stderr)?,
+            "type" => builtins::r#type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
-            _ => {
-                if let Some(_) = pipeline_input {
-                    let mut stages: Vec<(String, Vec<String>)> = Vec::new();
-                    stages.push((
-                        cmd.to_string(),
-                        args.iter().map(|s| s.to_string()).collect(),
-                    ));
-                    if let Some(rest) = pipeline_input {
-                        if !rest.is_empty() {
-                            let prog = rest[0].clone();
-                            let prog_args = rest[1..].to_vec();
-                            stages.push((prog.clone(), prog_args.clone()));
-                            if prog == "type" {
-                                let prog_args_refs: Vec<&str> = prog_args.iter().map(|s| s.as_str()).collect();
-                                builtins::r#type(
-                                    self,
-                                    &prog_args_refs,
-                                    redirect_stdout,
-                                    redirect_stderr,
-                                )?;
-                                return Ok(());
-                            }
-                        }
-                    }
-                    exec::run_external(
-                        self,
-                        cmd,
-                        &args,
-                        redirect_stdout,
-                        redirect_stderr,
-                        pipeline_input,
-                    )?;
-                } else {
-                    exec::run_external(
-                        self,
-                        cmd,
-                        &args,
-                        redirect_stdout,
-                        redirect_stderr,
-                        pipeline_input,
-                    )?;
-                }
-            }
+            _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
         }
         Ok(())
     }
