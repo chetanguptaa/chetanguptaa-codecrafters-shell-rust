@@ -143,6 +143,7 @@ pub fn history(
             }
             let mut file = OpenOptions::new()
                 .create(true)
+                .write(true)
                 .append(true)
                 .open(history_file)?;
             let start = shell.history_file_index;
@@ -154,9 +155,7 @@ pub fn history(
 
         }
         else {
-            let mut i = args.len() - 1;
-            while i < args.len() {
-                let arg = args[i];
+            for arg in args {
                 match arg.parse::<usize>() {
                     Ok(n) => {
                         let start = if n > shell.history.len() {
@@ -172,7 +171,6 @@ pub fn history(
                         writeln!(err_handle, "history: {}: invalid number", arg)?;
                     }
                 }
-                i -= 1;
             }
         }
     } else {
