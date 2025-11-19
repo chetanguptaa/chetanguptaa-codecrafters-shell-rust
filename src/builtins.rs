@@ -103,7 +103,7 @@ pub fn history(
     let mut out_handle = get_output_stream(redirect_stdout)?;
     let mut err_handle = get_output_stream(redirect_stderr)?;
     if args.len() > 0 {
-        if args[0] == "-r" && args.len() <= 1 {
+        if (args[0] == "-r" || args[0] == "-w") && args.len() <= 1 {
             return Err(ShellError::InvalidInput("history: missing argument".into()));
         } else if args[0] == "-r" && args.len() > 1 {
             let history_file = args[1];
@@ -121,7 +121,21 @@ pub fn history(
                     writeln!(err_handle, "history: {}: {}", history_file, e)?;
                 }
             } 
-        } else {
+        } else if args[0] == "-w" && args.len() > 1 {
+            let history_file = args[1];
+            if history_file.is_empty() {
+                return Err(ShellError::InvalidInput("history: missing argument".into()));
+            }
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(history_file)?;
+            for command in &shell.history {
+                writeln!(file, "{}", command)?;
+            }
+        }
+        else {
             let mut i = args.len() - 1;
             while i < args.len() {
                 let arg = args[i];
