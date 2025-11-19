@@ -10,6 +10,7 @@ use termion::raw::{IntoRawMode, RawTerminal};
 
 pub struct Shell {
     pub builtins: HashSet<String>,
+    pub history: Vec<String>,
     path_cache: HashMap<String, std::path::PathBuf>,
     running: bool,
 }
@@ -23,13 +24,14 @@ enum QuoteState {
 
 impl Shell {
     pub fn new() -> Self {
-        let builtins = ["exit", "echo", "type", "pwd", "cd"]
+        let builtins = ["exit", "echo", "type", "pwd", "cd", "history"]
             .iter()
             .map(|s| s.to_string())
             .collect();
         Self {
             builtins,
             path_cache: HashMap::new(),
+            history: Vec::new(),
             running: true,
         }
     }
@@ -242,6 +244,7 @@ impl Shell {
                 }
             }
         }
+        self.history.push(input.to_string());
         if pipeline.len() > 0 {
             return exec::run_pipeline(
                 self,
@@ -258,6 +261,7 @@ impl Shell {
             "type" => builtins::cmd_type(self, &args, redirect_stdout, redirect_stderr)?,
             "pwd" => builtins::pwd(redirect_stdout, redirect_stderr)?,
             "cd" => builtins::cd(&args)?,
+            "history" => builtins::history(self, redirect_stdout, redirect_stderr)?,
             _ => exec::run_external(self, cmd, &args, redirect_stdout, redirect_stderr)?,
         }
         Ok(())
