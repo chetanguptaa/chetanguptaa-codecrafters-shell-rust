@@ -13,6 +13,7 @@ pub struct Shell {
     pub history: Vec<String>,
     path_cache: HashMap<String, std::path::PathBuf>,
     running: bool,
+    up_arrow_count: usize,
 }
 
 #[derive(PartialEq)]
@@ -33,6 +34,7 @@ impl Shell {
             path_cache: HashMap::new(),
             history: Vec::new(),
             running: true,
+            up_arrow_count: 0,
         }
     }
     pub fn run(&mut self) -> ShellResult<()> {
@@ -139,10 +141,13 @@ impl Shell {
                     Key::Up => {
                         first_tab = false;
                         common_prefix_exists = false;
-                        if let Some(last_command) = self.history.last() {
-                            input = last_command.clone();
+                        self.up_arrow_count += 1;
+                        if self.up_arrow_count <= self.history.len() {
+                            let index = self.history.len() - self.up_arrow_count;
+                            input = self.history[index].clone();
                             Self::redraw_line(&mut stdout, &input)?;
                         } else {
+                            self.up_arrow_count = self.history.len();
                             print!("\x07");
                             stdout.flush()?;
                         }
