@@ -191,6 +191,7 @@ pub fn exit(shell: &mut Shell) -> ShellResult<()> {
     if let Some(ref file) = history_file {
         let mut file = OpenOptions::new()
             .create(true)
+            .write(true)
             .truncate(true)
             .open(file)?;
         let start = 0;
