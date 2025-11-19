@@ -31,11 +31,21 @@ impl Shell {
             .iter()
             .map(|s| s.to_string())
             .collect();
+        let mut history = Vec::new();
+        let mut history_file_index = 0;
+        if let Ok(file) = env::var("HISTFILE") {
+            if let Ok(content) = std::fs::read_to_string(&file) {
+                for line in content.lines() {
+                    history.push(line.to_string());
+                }
+                history_file_index = history.len();
+            }
+        }
         Self {
             builtins,
             path_cache: HashMap::new(),
-            history: Vec::new(),
-            history_file_index: 0,
+            history,
+            history_file_index,
             running: true,
             up_arrow_count: 0,
         }
@@ -49,19 +59,6 @@ impl Shell {
             let mut input = String::new();
             let mut first_tab = false;
             let mut common_prefix_exists = false;
-            let history_file = env::var("HISTFILE").ok();
-            if let Some(ref file) = history_file {
-                let content = std::fs::read_to_string(file);
-                if let Ok(data) = content {
-                    if data.lines().count() > self.history.len() {
-                        self.history.clear();
-                        for line in data.lines() {
-                            self.history.push(line.to_string());
-                        }
-                    }
-                }
-            }
-            self.history_file_index = self.history.len();
             for key in io::stdin().keys() {
                 match key? {
                     Key::Char('\n') => {

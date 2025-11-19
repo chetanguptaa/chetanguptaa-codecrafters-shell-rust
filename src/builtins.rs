@@ -147,7 +147,7 @@ pub fn history(
                 .append(true)
                 .open(history_file)?;
             let start = shell.history_file_index;
-            let end = shell.history.len() - 1;
+            let end = shell.history.len();
             for cmd in &shell.history[start..end] {
                 writeln!(file, "{}", cmd)?;
             }
