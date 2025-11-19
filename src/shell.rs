@@ -152,6 +152,23 @@ impl Shell {
                             stdout.flush()?;
                         }
                     }
+                    Key::Down => {
+                        first_tab = false;
+                        common_prefix_exists = false;
+                        if self.up_arrow_count > 0 {
+                            self.up_arrow_count -= 1;
+                            if self.up_arrow_count == 0 {
+                                input.clear();
+                            } else {
+                                let index = self.history.len() - self.up_arrow_count;
+                                input = self.history[index].clone();
+                            }
+                            Self::redraw_line(&mut stdout, &input)?;
+                        } else {
+                            print!("\x07");
+                            stdout.flush()?;
+                        }
+                    }
                     _ => {
                         self.running = false;
                         break;
