@@ -187,15 +187,14 @@ pub fn history(
 }
 
 pub fn exit(shell: &mut Shell) -> ShellResult<()> {
-    let history_file = env::var("HISTFILE").ok();
-    if let Some(ref file) = history_file {
+    if let Ok(file_path) = env::var("HISTFILE") {
         let mut file = OpenOptions::new()
             .create(true)
-            .append(true)
-            .open(file)?;
-        let start = shell.history_file_index;
-        let end = shell.history.len();
-        for cmd in &shell.history[start - 1..end] {
+            .write(true) 
+            .truncate(true)
+            .open(file_path)?;
+
+        for cmd in &shell.history {
             writeln!(file, "{}", cmd)?;
         }
     }
